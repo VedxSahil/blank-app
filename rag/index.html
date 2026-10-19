@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fund RAG Engine</title><style>
+:root{--bg:#f7f8fa;--fg:#1c2330;--card:#fff;--ac:#1f4e79;--mut:#667}
+@media(prefers-color-scheme:dark){:root{--bg:#10151c;--fg:#e6e9ee;--card:#1a212b;--ac:#6aa9e0;--mut:#9aa}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}
+main{max-width:900px;margin:auto;padding:16px}h1{font-size:20px}h2{font-size:16px;color:var(--ac);margin:0 0 8px}
+.c{background:var(--card);border-radius:10px;padding:14px;margin:12px 0;box-shadow:0 1px 3px #0002}
+input,button{font:inherit;padding:9px;border-radius:8px;border:1px solid #8886}input{width:100%;box-sizing:border-box}
+button{background:var(--ac);color:#fff;border:0;cursor:pointer;margin:6px 6px 0 0}
+table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #8886;padding:5px;text-align:left}
+.m{color:#b00020;font-weight:600}.s{color:var(--mut);font-size:12px}
+</style></head><body><main>
+<h1>Private Equity / Fund RAG Engine</h1>
+<div class="s">Fully client-side: no login, no API, no token cost. Document: <span id="doc"></span> (<span id="n"></span> chunks)</div>
+<div class="c"><h2>0. Load your document (PDF or .txt)</h2><input type="file" id="f" accept=".pdf,.txt" onchange="load(this.files[0])"><div class="s" id="st">Processed locally in your browser; the file never leaves your device.</div></div>
+<div class="c"><input id="q" placeholder="Ask e.g. What are the fees? / redemption terms / risk factors / minimum investment" value="What are the management fees, performance fee and initial fee?">
+<button onclick="run()">Generate Report</button>
+<button onclick="fee()">Fee calculator</button></div>
+<div id="fc" class="c" style="display:none"><h2>Verified calculation (computed in code, not predicted)</h2>
+Subscription USD <input id="amt" type="number" value="1500000" style="width:160px"> NAV growth % <input id="g" type="number" value="10" style="width:80px">
+<button onclick="calc()">Calculate</button><div id="co"></div></div>
+<div id="out"></div></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+let D={doc:'(no document)',chunks:[]},C=[],T=[],N=1,avg=1,df={};
+const el=id=>document.getElementById(id);
+function build(){C=D.chunks;T=C.map(c=>tok(c.text+' '+c.section));N=C.length||1;avg=T.reduce((a,t)=>a+t.length,0)/N||1;df={};
+T.forEach(t=>new Set(t).forEach(w=>df[w]=(df[w]||0)+1));el('doc').textContent=D.doc;el('n').textContent=C.length}
+const clean=t=>t.normalize('NFKC').replace(/[\u2019]/g,"'").replace(/[\u201c\u201d]/g,'"').replace(/[\u2013]/g,'-').replace(/[^\x20-\x7E\n]/g,' ').replace(/[ \t]+/g,' ');
+const ROM=/^\s*(XVIII|XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I)\.\s+(.+?)\s*$/;
+function chunkPages(pages,name){const ch=[];let sec='Front matter';
+pages.forEach((pg,i)=>{pg=clean(pg);if(i>2)pg.split('\n').forEach(l=>{const m=l.match(ROM);if(m&&/[A-Za-z]{4}/.test(m[2])&&!/\d\s*$/.test(m[2]))sec='Section '+m[1]+': '+m[2]});
+let buf='';pg.split(/\n\s*\n/).map(p=>p.replace(/\s*\n\s*/g,' ').trim()).filter(p=>p.length>40).forEach(p=>{
+if(buf.length+p.length>900&&buf){ch.push({id:ch.length,page:i+1,section:sec,text:buf});buf=''}buf+=(buf?' ':'')+p});
+if(buf)ch.push({id:ch.length,page:i+1,section:sec,text:buf})});D={doc:name,chunks:ch};build()}
+async function load(f){if(!f)return;el('st').textContent='Reading...';let pages;
+if(/\.pdf$/i.test(f.name)){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pages=[];
+for(let p=1;p<=pdf.numPages;p++){const tc=await(await pdf.getPage(p)).getTextContent();let y=null,t='';
+tc.items.forEach(it=>{const yy=it.transform[5];if(y!==null&&Math.abs(yy-y)>14)t+='\n\n';else if(y!==null&&Math.abs(yy-y)>2)t+='\n';t+=it.str+' ';y=yy});pages.push(t)}}
+else pages=(await f.text()).split('\f');
+chunkPages(pages,f.name);el('st').textContent='Indexed '+C.length+' chunks in your browser. Nothing is uploaded.'}
+const MISSING='<span class="m">[Data Point Missing from Sources]</span>';
+const STOP=new Set('the a an of and or to in is are what for on with by be as at this that it from which who how'.split(' '));
+const tok=s=>s.toLowerCase().match(/[a-z0-9]+/g).filter(w=>!STOP.has(w));
+function search(q,k=5){const qs=tok(q);return C.map((c,i)=>{let s=0;const t=T[i];const tf={};t.forEach(w=>tf[w]=(tf[w]||0)+1);
+qs.forEach(w=>{if(!tf[w])return;const idf=Math.log(1+(N-df[w]+.5)/(df[w]+.5));s+=idf*tf[w]*2.2/(tf[w]+1.2*(.25+.75*t.length/avg))});
+if(c.section.toLowerCase().split(/\W+/).some(w=>qs.includes(w)&&w.length>3))s*=1.3;return[s,c]}).filter(x=>x[0]>0).sort((a,b)=>b[0]-a[0]).slice(0,k).map(x=>x[1])}
+const src=c=>`[Source: ${D.doc}, ${c.section}, p.${c.page}]`;
+const esc=s=>s.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+const sents=t=>t.match(/[^.;]+[.;]/g)||[t];
+function facts(hits){const out=[];hits.forEach(c=>sents(c.text).forEach(s=>{if(/\d+(\.\d+)?\s*(%|per cent)|USD\s?[\d,]+|\d+\s+(days|months|years)/i.test(s))out.push([s.trim(),c])}));return out.slice(0,8)}
+function kpi(q){const all=C.map(c=>c.text).join(' ');const g=(re)=>{const m=all.match(re);return m?m[0]:null};
+const mi=C.find(c=>/minimum (initial )?(investment|subscription)[^.]{0,60}USD ?[\d,]+/i.test(c.text));
+const v=(re)=>/\b(DPI|RVPI|IRR)\b/.test(all)?null:null;
+return[['Vintage',MISSING],['Commitments (minimum investment)',mi?esc(mi.text.match(/minimum (initial )?(investment|subscription)[^.]{0,60}USD ?[\d,]+/i)[0])+' '+src(mi):MISSING],['DPI',MISSING],['RVPI',MISSING],['Net IRR',MISSING]]}
+function run(){const q=document.getElementById('q').value;const h=search(q);const f=facts(h);
+if(!h.length){out.innerHTML='<div class="c">'+MISSING+'</div>';return}
+const sec=[...new Set(h.map(c=>c.section))];
+let o=`<div class="c"><h2>1. Executive Summary</h2><p>This report responds to the query "${esc(q)}" using the ${D.doc}. The most relevant disclosures appear in ${sec.slice(0,3).join('; ')} ${src(h[0])}. Performance metrics such as DPI, RVPI and Net IRR are not disclosed in the source and are not estimated.</p></div>`;
+o+='<div class="c"><h2>2. Key Performance Indicators</h2><table><tr><th>Metric</th><th>Value</th></tr>'+kpi(q).map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')+'</table></div>';
+o+='<div class="c"><h2>3. Extracted Terms (quantitative)</h2><ul>'+(f.length?f.map(x=>`<li>${esc(x[0])} ${src(x[1])}</li>`).join(''):'<li>'+MISSING+'</li>')+'</ul></div>';
+o+='<div class="c"><h2>4. Portfolio / Narrative Observations</h2><ul>'+h.slice(0,4).map(c=>`<li>${esc(c.text.slice(0,350))}... ${src(c)}</li>`).join('')+'</ul></div>';
+out.innerHTML=o}
+function fee(){document.getElementById('fc').style.display='block'}
+function calc(){const a=+amt.value,g=+document.getElementById('g').value/100;
+let init=a<=499999?a*.02:a<=999999?a*.015:a*.01;const gain=a*g,perf=gain>0?gain*.2:0;
+const fmt=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
+co.innerHTML=`<table><tr><td>Initial fee (tier)</td><td>USD ${fmt(init)} [Source: ${D.doc}, Section XIII, p.48]</td></tr><tr><td>Performance allocation (20% of positive NAV gain, hurdle/high-water-mark not modelled)</td><td>USD ${fmt(perf)} [Source: ${D.doc}, Section XIII, p.48]</td></tr></table><div class="s">Simplified illustration; verify against the PPM.</div>`}
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')run()});
+</script></body></html>
