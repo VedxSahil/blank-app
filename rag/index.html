@@ -12,7 +12,7 @@ table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid 
 </style></head><body><main>
 <h1>Private Equity / Fund RAG Engine</h1>
 <div class="s">Fully client-side: no login, no API, no token cost. Document: <span id="doc"></span> (<span id="n"></span> chunks)</div>
-<div class="c"><h2>0. Load your document (PDF or .txt)</h2><input type="file" id="f" accept=".pdf,.txt" onchange="load(this.files[0])"><div class="s" id="st">Processed locally in your browser; the file never leaves your device.</div></div>
+<div class="c"><h2>0. Load 1 or 2 documents (PDF or .txt; select both files together to compare)</h2><input type="file" id="f" accept=".pdf,.txt" multiple onchange="load(this.files)"><div class="s" id="st">Processed locally in your browser; the file never leaves your device.</div></div>
 <div class="c"><input id="q" placeholder="Ask e.g. What are the fees? / redemption terms / risk factors / minimum investment" value="What are the management fees, performance fee and initial fee?">
 <div class="s" style="margin-top:8px"><label><input type="radio" name="mode" value="free" checked style="width:auto"> Option 1: Free report (offline, no tokens)</label><br>
 <label><input type="radio" name="mode" value="ai" style="width:auto"> Option 2: AI answer (uses your own Claude API key)</label></div>
@@ -34,22 +34,24 @@ const ROM=/^\s*(XVIII|XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I
 function chunkPages(pages,name){const ch=[];let sec='Front matter';
 pages.forEach((pg,i)=>{pg=clean(pg);if(i>2)pg.split('\n').forEach(l=>{const m=l.match(ROM);if(m&&/[A-Za-z]{4}/.test(m[2])&&!/\d\s*$/.test(m[2]))sec='Section '+m[1]+': '+m[2]});
 let buf='';pg.split(/\n\s*\n/).map(p=>p.replace(/\s*\n\s*/g,' ').trim()).filter(p=>p.length>40).forEach(p=>{
-if(buf.length+p.length>900&&buf){ch.push({id:ch.length,page:i+1,section:sec,text:buf});buf=''}buf+=(buf?' ':'')+p});
-if(buf)ch.push({id:ch.length,page:i+1,section:sec,text:buf})});D={doc:name,chunks:ch};build()}
-async function load(f){if(!f)return;el('st').textContent='Reading...';let pages;
+if(buf.length+p.length>900&&buf){ch.push({doc:name,page:i+1,section:sec,text:buf});buf=''}buf+=(buf?' ':'')+p});
+if(buf)ch.push({doc:name,page:i+1,section:sec,text:buf})});D.chunks=D.chunks.concat(ch);D.doc=[...new Set(D.chunks.map(c=>c.doc))].join(' + ');build();return ch.length}
+async function load(files){D={doc:'',chunks:[]};build();for(const f of [...files].slice(0,2)){el('st').textContent='Reading '+f.name+'...';let pages;
 if(/\.pdf$/i.test(f.name)){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pages=[];
 for(let p=1;p<=pdf.numPages;p++){const tc=await(await pdf.getPage(p)).getTextContent();let y=null,t='';
 tc.items.forEach(it=>{const yy=it.transform[5];if(y!==null&&Math.abs(yy-y)>14)t+='\n\n';else if(y!==null&&Math.abs(yy-y)>2)t+='\n';t+=it.str+' ';y=yy});pages.push(t)}}
 else pages=(await f.text()).split('\f');
-chunkPages(pages,f.name);el('st').textContent='Indexed '+C.length+' chunks in your browser. Nothing is uploaded.'}
+chunkPages(pages,f.name)}el('st').textContent='Indexed '+C.length+' chunks from '+D.doc+' in your browser. Nothing is uploaded.'}
 const MISSING='<span class="m">[Data Point Missing from Sources]</span>';
 const STOP=new Set('the a an of and or to in is are what for on with by be as at this that it from which who how'.split(' '));
 const tok=s=>s.toLowerCase().match(/[a-z0-9]+/g).filter(w=>!STOP.has(w));
-function search(q,k=5){const qs=tok(q);return C.map((c,i)=>{let s=0;const t=T[i];const tf={};t.forEach(w=>tf[w]=(tf[w]||0)+1);
+const docs=()=>[...new Set(C.map(c=>c.doc))];
+function hitsFor(q){const d=docs();return d.length>1?d.flatMap(n=>search(q,3,n)):search(q,5)}
+function search(q,k=5,only){const qs=tok(q);return C.map((c,i)=>{if(only&&c.doc!==only)return[0,c];let s=0;const t=T[i];const tf={};t.forEach(w=>tf[w]=(tf[w]||0)+1);
 qs.forEach(w=>{if(!tf[w])return;const idf=Math.log(1+(N-df[w]+.5)/(df[w]+.5));s+=idf*tf[w]*2.2/(tf[w]+1.2*(.25+.75*t.length/avg))});
 if(c.section.toLowerCase().split(/\W+/).some(w=>qs.includes(w)&&w.length>3))s*=1.3;return[s,c]}).filter(x=>x[0]>0).sort((a,b)=>b[0]-a[0]).slice(0,k).map(x=>x[1])}
-const src=c=>`[Source: ${D.doc}, ${c.section}, p.${c.page}]`;
+const src=c=>`[Source: ${c.doc}, ${c.section}, p.${c.page}]`;
 const esc=s=>s.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 const sents=t=>t.match(/[^.;]+[.;]/g)||[t];
 function facts(hits){const out=[];hits.forEach(c=>sents(c.text).forEach(s=>{if(/\d+(\.\d+)?\s*(%|per cent)|USD\s?[\d,]+|\d+\s+(days|months|years)/i.test(s))out.push([s.trim(),c])}));return out.slice(0,8)}
@@ -57,7 +59,7 @@ function kpi(q){const all=C.map(c=>c.text).join(' ');const g=(re)=>{const m=all.
 const mi=C.find(c=>/minimum (initial )?(investment|subscription)[^.]{0,60}USD ?[\d,]+/i.test(c.text));
 const v=(re)=>/\b(DPI|RVPI|IRR)\b/.test(all)?null:null;
 return[['Vintage',MISSING],['Commitments (minimum investment)',mi?esc(mi.text.match(/minimum (initial )?(investment|subscription)[^.]{0,60}USD ?[\d,]+/i)[0])+' '+src(mi):MISSING],['DPI',MISSING],['RVPI',MISSING],['Net IRR',MISSING]]}
-function run(){const q=document.getElementById('q').value;const h=search(q);const f=facts(h);
+function run(){const q=document.getElementById('q').value;const h=hitsFor(q);const f=facts(h);
 if(!h.length){out.innerHTML='<div class="c">'+MISSING+'</div>';return}
 const sec=[...new Set(h.map(c=>c.section))];
 let o=`<div class="c"><h2>1. Executive Summary</h2><p>This report responds to the query "${esc(q)}" using the ${D.doc}. The most relevant disclosures appear in ${sec.slice(0,3).join('; ')} ${src(h[0])}. Performance metrics such as DPI, RVPI and Net IRR are not disclosed in the source and are not estimated.</p></div>`;
@@ -72,11 +74,11 @@ const fmt=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
 co.innerHTML=`<table><tr><td>Initial fee (tier)</td><td>USD ${fmt(init)} [Source: ${D.doc}, Section XIII, p.48]</td></tr><tr><td>Performance allocation (20% of positive NAV gain, hurdle/high-water-mark not modelled)</td><td>USD ${fmt(perf)} [Source: ${D.doc}, Section XIII, p.48]</td></tr></table><div class="s">Simplified illustration; verify against the PPM.</div>`}
 
 async function go(){const m=document.querySelector('input[name=mode]:checked').value;if(m==='free')return run();
-const q=el('q').value,h=search(q,5),k=el('key').value.trim();
+const q=el('q').value,h=hitsFor(q),k=el('key').value.trim();
 if(!k){out.innerHTML='<div class="c">Enter your Claude API key for Option 2, or choose Option 1.</div>';return}
 if(!h.length){out.innerHTML='<div class="c">'+MISSING+'</div>';return}
 out.innerHTML='<div class="c">Asking Claude (top '+h.length+' passages only, to keep tokens low)...</div>';
-const ctx=h.map((c,i)=>`[${i+1}] (${D.doc}, ${c.section}, p.${c.page}) ${c.text}`).join('\n\n');
+const ctx=h.map((c,i)=>`[${i+1}] (${c.doc}, ${c.section}, p.${c.page}) ${c.text}`).join('\n\n');
 try{const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
 body:JSON.stringify({model:'claude-haiku-5-5',max_tokens:700,system:'You are a formal, conservative Investor Relations analyst. Answer ONLY from the provided passages. Structure: 1) Executive Summary (3 sentences) 2) KPI table in markdown with Vintage, Commitments, DPI, RVPI, Net IRR 3) Portfolio Observations as bullets. If a figure is absent write "[Data Point Missing from Sources]"; never estimate. Follow every metric with a citation like [Source: file, section, p.N]. Plain English.',
 messages:[{role:'user',content:'PASSAGES:\n'+ctx+'\n\nQUESTION: '+q}]})});
