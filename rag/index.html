@@ -14,7 +14,10 @@ table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid 
 <div class="s">Fully client-side: no login, no API, no token cost. Document: <span id="doc"></span> (<span id="n"></span> chunks)</div>
 <div class="c"><h2>0. Load your document (PDF or .txt)</h2><input type="file" id="f" accept=".pdf,.txt" onchange="load(this.files[0])"><div class="s" id="st">Processed locally in your browser; the file never leaves your device.</div></div>
 <div class="c"><input id="q" placeholder="Ask e.g. What are the fees? / redemption terms / risk factors / minimum investment" value="What are the management fees, performance fee and initial fee?">
-<button onclick="run()">Generate Report</button>
+<div class="s" style="margin-top:8px"><label><input type="radio" name="mode" value="free" checked style="width:auto"> Option 1: Free report (offline, no tokens)</label><br>
+<label><input type="radio" name="mode" value="ai" style="width:auto"> Option 2: AI answer (uses your own Claude API key)</label></div>
+<input id="key" type="password" placeholder="Claude API key (sk-ant-...), kept in this tab only, used for Option 2" style="margin-top:6px">
+<button onclick="go()">Generate Report</button>
 <button onclick="fee()">Fee calculator</button></div>
 <div id="fc" class="c" style="display:none"><h2>Verified calculation (computed in code, not predicted)</h2>
 Subscription USD <input id="amt" type="number" value="1500000" style="width:160px"> NAV growth % <input id="g" type="number" value="10" style="width:80px">
@@ -67,5 +70,18 @@ function calc(){const a=+amt.value,g=+document.getElementById('g').value/100;
 let init=a<=499999?a*.02:a<=999999?a*.015:a*.01;const gain=a*g,perf=gain>0?gain*.2:0;
 const fmt=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
 co.innerHTML=`<table><tr><td>Initial fee (tier)</td><td>USD ${fmt(init)} [Source: ${D.doc}, Section XIII, p.48]</td></tr><tr><td>Performance allocation (20% of positive NAV gain, hurdle/high-water-mark not modelled)</td><td>USD ${fmt(perf)} [Source: ${D.doc}, Section XIII, p.48]</td></tr></table><div class="s">Simplified illustration; verify against the PPM.</div>`}
-document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')run()});
+
+async function go(){const m=document.querySelector('input[name=mode]:checked').value;if(m==='free')return run();
+const q=el('q').value,h=search(q,5),k=el('key').value.trim();
+if(!k){out.innerHTML='<div class="c">Enter your Claude API key for Option 2, or choose Option 1.</div>';return}
+if(!h.length){out.innerHTML='<div class="c">'+MISSING+'</div>';return}
+out.innerHTML='<div class="c">Asking Claude (top '+h.length+' passages only, to keep tokens low)...</div>';
+const ctx=h.map((c,i)=>`[${i+1}] (${D.doc}, ${c.section}, p.${c.page}) ${c.text}`).join('\n\n');
+try{const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+body:JSON.stringify({model:'claude-haiku-5-5',max_tokens:700,system:'You are a formal, conservative Investor Relations analyst. Answer ONLY from the provided passages. Structure: 1) Executive Summary (3 sentences) 2) KPI table in markdown with Vintage, Commitments, DPI, RVPI, Net IRR 3) Portfolio Observations as bullets. If a figure is absent write "[Data Point Missing from Sources]"; never estimate. Follow every metric with a citation like [Source: file, section, p.N]. Plain English.',
+messages:[{role:'user',content:'PASSAGES:\n'+ctx+'\n\nQUESTION: '+q}]})});
+const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||r.status);
+out.innerHTML='<div class="c"><h2>AI answer</h2><div style="white-space:pre-wrap">'+esc(j.content.map(b=>b.text||'').join(''))+'</div><div class="s">Generated from the retrieved passages only; verify against the document.</div></div>'}
+catch(e){out.innerHTML='<div class="c m">Error: '+esc(String(e.message))+'</div>'}}
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')go()});
 </script></body></html>
