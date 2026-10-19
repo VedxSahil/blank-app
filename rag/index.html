@@ -73,7 +73,7 @@ function feeTerms(name){const cs=C.filter(c=>c.doc===name),r={tiers:[],perf:null
 cs.forEach(c=>{const t=c.text;let m;const re=/(\d+(?:\.\d+)?)\s?%\s+of the subscription amount\s+(up to|above|over)\s+USD\s?([\d,]+)/gi;
 while((m=re.exec(t)))r.tiers.push({pct:+m[1],up:/up/i.test(m[2]),lim:num(m[3]),c});
 if(!r.perf&&(m=t.match(/(\d+(?:\.\d+)?)\s?%\s+of the positive (?:difference|amount|appreciation|return|increase)/i)))r.perf={pct:+m[1],c};
-if(!r.mgmt&&(m=t.match(/management fee[^.]{0,160}?(\d+(?:\.\d+)?)\s?(?:%|per cent)\s*(?:per annum|per year|p\.a\.|annually)/i)))r.mgmt={pct:+m[1],c}});return r}
+if(!r.mgmt&&(m=t.match(/management fee[^.]{0,160}?(\d+(?:\.\d+)?)\s?(?:%|per ?cent)\s*(?:per annum|per year|p\.a\.|annually)/i)))r.mgmt={pct:+m[1],c}});return r}
 function calc(){const a=+amt.value,g=+document.getElementById('g').value/100;
 const fmt=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
 if(!C.length){co.innerHTML='<p>Upload one or more documents first.</p>';return}
