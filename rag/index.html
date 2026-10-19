@@ -12,7 +12,7 @@ table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid 
 </style></head><body><main>
 <h1>Private Equity / Fund RAG Engine</h1>
 <div class="s">Fully client-side: no login, no API, no token cost. Document: <span id="doc"></span> (<span id="n"></span> chunks)</div>
-<div class="c"><h2>0. Load 1 or 2 documents (PDF or .txt; select both files together to compare)</h2><input type="file" id="f" accept=".pdf,.txt" multiple onchange="load(this.files)"><div class="s" id="st">Processed locally in your browser; the file never leaves your device.</div></div>
+<div class="c"><h2>0. Load one or more documents (PDF or .txt; select several files together)</h2><input type="file" id="f" accept=".pdf,.txt" multiple onchange="load(this.files)"><div class="s" id="st">Processed locally in your browser; the file never leaves your device.</div></div>
 <div class="c"><input id="q" placeholder="Ask e.g. What are the fees? / redemption terms / risk factors / minimum investment" value="What are the management fees, performance fee and initial fee?">
 <div class="s" style="margin-top:8px"><label><input type="radio" name="mode" value="free" checked style="width:auto"> Option 1: Free report (offline, no tokens)</label><br>
 <label><input type="radio" name="mode" value="ai" style="width:auto"> Option 2: AI answer (uses your own Claude API key)</label></div>
@@ -36,7 +36,7 @@ pages.forEach((pg,i)=>{pg=clean(pg);if(i>2)pg.split('\n').forEach(l=>{const m=l.
 let buf='';pg.split(/\n\s*\n/).map(p=>p.replace(/\s*\n\s*/g,' ').trim()).filter(p=>p.length>40).forEach(p=>{
 if(buf.length+p.length>900&&buf){ch.push({doc:name,page:i+1,section:sec,text:buf});buf=''}buf+=(buf?' ':'')+p});
 if(buf)ch.push({doc:name,page:i+1,section:sec,text:buf})});D.chunks=D.chunks.concat(ch);D.doc=[...new Set(D.chunks.map(c=>c.doc))].join(' + ');build();return ch.length}
-async function load(files){D={doc:'',chunks:[]};build();for(const f of [...files].slice(0,2)){el('st').textContent='Reading '+f.name+'...';let pages;
+async function load(files){D={doc:'',chunks:[]};build();for(const f of [...files]){el('st').textContent='Reading '+f.name+'...';let pages;
 if(/\.pdf$/i.test(f.name)){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pages=[];
 for(let p=1;p<=pdf.numPages;p++){const tc=await(await pdf.getPage(p)).getTextContent();let y=null,t='';
@@ -68,11 +68,26 @@ o+='<div class="c"><h2>3. Extracted Terms (quantitative)</h2><ul>'+(f.length?f.m
 o+='<div class="c"><h2>4. Portfolio / Narrative Observations</h2><ul>'+h.slice(0,4).map(c=>`<li>${esc(c.text.slice(0,350))}... ${src(c)}</li>`).join('')+'</ul></div>';
 out.innerHTML=o}
 function fee(){document.getElementById('fc').style.display='block'}
+const num=x=>+String(x).replace(/,/g,'');
+function feeTerms(name){const cs=C.filter(c=>c.doc===name),r={tiers:[],perf:null,mgmt:null};
+cs.forEach(c=>{const t=c.text;let m;const re=/(\d+(?:\.\d+)?)\s?%\s+of the subscription amount\s+(up to|above|over)\s+USD\s?([\d,]+)/gi;
+while((m=re.exec(t)))r.tiers.push({pct:+m[1],up:/up/i.test(m[2]),lim:num(m[3]),c});
+if(!r.perf&&(m=t.match(/(\d+(?:\.\d+)?)\s?%\s+of the positive (?:difference|amount|appreciation|return|increase)/i)))r.perf={pct:+m[1],c};
+if(!r.mgmt&&(m=t.match(/management fee[^.]{0,160}?(\d+(?:\.\d+)?)\s?(?:%|per cent)\s*(?:per annum|per year|p\.a\.|annually)/i)))r.mgmt={pct:+m[1],c}});return r}
 function calc(){const a=+amt.value,g=+document.getElementById('g').value/100;
-let init=a<=499999?a*.02:a<=999999?a*.015:a*.01;const gain=a*g,perf=gain>0?gain*.2:0;
 const fmt=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
-co.innerHTML=`<table><tr><td>Initial fee (tier)</td><td>USD ${fmt(init)} [Source: ${D.doc}, Section XIII, p.48]</td></tr><tr><td>Performance allocation (20% of positive NAV gain, hurdle/high-water-mark not modelled)</td><td>USD ${fmt(perf)} [Source: ${D.doc}, Section XIII, p.48]</td></tr></table><div class="s">Simplified illustration; verify against the PPM.</div>`}
-
+if(!C.length){co.innerHTML='<p>Upload one or more documents first.</p>';return}
+const M='<span class="m">[Data Point Missing from Sources]</span>';
+const cols=docs().map(n=>{const t=feeTerms(n);let init=M;
+if(t.tiers.length){const up=t.tiers.filter(x=>x.up).sort((x,y)=>x.lim-y.lim),ab=t.tiers.filter(x=>!x.up);
+const hit=up.find(x=>a<=x.lim)||ab.sort((x,y)=>y.lim-x.lim).find(x=>a>=x.lim)||ab[0];
+if(hit)init='USD '+fmt(a*hit.pct/100)+' ('+hit.pct+'%) '+src(hit.c)}
+const perf=t.perf?'USD '+fmt(Math.max(a*g,0)*t.perf.pct/100)+' ('+t.perf.pct+'% of gain) '+src(t.perf.c):M;
+const mg=t.mgmt?'USD '+fmt(a*t.mgmt.pct/100)+' per year ('+t.mgmt.pct+'%) '+src(t.mgmt.c):M;
+return[n,init,perf,mg]});
+const row=(l,i)=>'<tr><td>'+l+'</td>'+cols.map(c=>'<td>'+(i?c[i]:'<b>'+esc(c[0])+'</b>')+'</td>').join('')+'</tr>';
+const tot=cols.map(c=>c).length;
+co.innerHTML='<div style="overflow-x:auto"><table>'+row('Document',0)+row('Initial fee',1)+row('Performance allocation',2)+row('Management fee (annual)',3)+'</table></div><div class="s">Terms are read from each document by pattern; computed in code on USD '+fmt(a)+' and '+(g*100)+'% growth. Hurdles and high-water marks are not modelled; verify against the source.</div>'}
 async function go(){const m=document.querySelector('input[name=mode]:checked').value;if(m==='free')return run();
 const q=el('q').value,h=hitsFor(q),k=el('key').value.trim();
 if(!k){out.innerHTML='<div class="c">Enter your Claude API key for Option 2, or choose Option 1.</div>';return}
