@@ -76,3 +76,29 @@ def test_ablation_no_gate_no_verifier_lets_hallucination_through() -> None:
 def test_extractive_generator_needs_overlap() -> None:
     assert ExtractiveGenerator().generate("unrelated waterfall", CORPUS) == ""
     assert ExtractiveGenerator().generate("the of", CORPUS) == ""
+
+
+def test_acronym_asked_but_absent_is_refused_not_answered_with_a_neighbour() -> None:
+    # Corpus mentions "net" and "fund" but never IRR. Without the mandatory-term rule the NAV
+    # sentence would answer an IRR question.
+    corpus = [_c(2, "The net asset value of the fund was 500 million at 30 June 2023.")]
+    eng = Engine(HybridRetriever(corpus), Gate(0.5))
+    a = eng.ask("What is the net IRR of the fund?")
+    assert a.refused and a.reason == "key_term_missing"
+
+
+def test_glossary_expansion_lets_nav_match_spelled_out_text() -> None:
+    corpus = [_c(2, "The net asset value of the fund was 500 million at 30 June 2023.")]
+    a = Engine(HybridRetriever(corpus), Gate(0.5)).ask("What is the NAV?")
+    assert not a.refused and a.text.endswith("[fx, p.2].")
+
+
+def test_year_in_question_must_appear_in_answer() -> None:
+    corpus = [_c(2, "Distributions were 40 million in 2022.")]
+    eng = Engine(HybridRetriever(corpus), Gate(0.5))
+    assert eng.ask("What were distributions in 2022?").reason == "answered"
+    # 2021 is absent: refused (here by the low-score gate; the mandatory-term rule backs it up
+    # when other words push the score over the threshold).
+    assert eng.ask("What were distributions in 2021?").refused
+    low = Engine(HybridRetriever(corpus), Gate(0.0)).ask("What were distributions in 2021?")
+    assert low.reason == "key_term_missing"

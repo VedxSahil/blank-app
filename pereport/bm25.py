@@ -32,9 +32,16 @@ STOPWORDS = frozenset({
 })  # fmt: skip
 
 
+def stem(token: str) -> str:
+    """Strip a plural 's' (fees -> fee). Numbers and words ending in 'ss' are left alone."""
+    if len(token) > 3 and token.endswith("s") and not token.endswith("ss") and token.isalpha():
+        return token[:-1]
+    return token
+
+
 def terms(text: str) -> list[str]:
-    """Index/query terms: tokens without stopwords (numbers are never stopwords)."""
-    return [t for t in tokenize(text) if t not in STOPWORDS]
+    """Index/query terms: stemmed tokens without stopwords (numbers are never stopwords)."""
+    return [stem(t) for t in tokenize(text) if t not in STOPWORDS]
 
 
 @dataclass(frozen=True)

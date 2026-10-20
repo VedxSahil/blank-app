@@ -16,8 +16,40 @@ from pereport.gate import Gate
 from pereport.retrieval import HybridRetriever
 from pereport.verifier import CITATION, VerifiedAnswer, split_sentences, verify_answer
 
+# Finance acronyms and their spelled-out forms. Domain knowledge, not fund data.
+GLOSSARY = {
+    "nav": "net asset value",
+    "irr": "internal rate of return",
+    "tvpi": "total value to paid-in",
+    "dpi": "distributions to paid-in",
+    "rvpi": "residual value to paid-in",
+    "moic": "multiple on invested capital",
+    "gp": "general partner",
+    "lp": "limited partner",
+    "aif": "alternative investment fund",
+}
+_ACRONYM = re.compile(r"\b[A-Z]{2,}[a-z]?\b")
 _HAS_DIGIT = re.compile(r"\d")
 REFUSAL_TEXT = "The provided documents do not contain enough information to answer this question."
+
+
+def expand_question(question: str) -> str:
+    """Append the spelled-out form of known acronyms so 'NAV' also finds 'net asset value'."""
+    extra = [GLOSSARY[a.lower()] for a in _ACRONYM.findall(question) if a.lower() in GLOSSARY]
+    return question + (" " + " ".join(extra) if extra else "")
+
+
+def missing_mandatory_terms(question: str, answer: str) -> list[str]:
+    """Acronyms and numbers asked about must appear in the answer (or their spelled-out form)."""
+    have = set(terms(answer))
+    asked = {a.lower() for a in _ACRONYM.findall(question)}
+    asked |= {t for t in terms(question) if any(c.isdigit() for c in t)}
+    missing = []
+    for t in sorted(asked):
+        spelled = set(terms(GLOSSARY.get(t, "")))
+        if t not in have and not (spelled and spelled <= have):
+            missing.append(t)
+    return missing
 
 
 class Generator(Protocol):
@@ -102,7 +134,8 @@ class Engine:
         return Answer(q, REFUSAL_TEXT, True, reason, mode, top, **kw)  # type: ignore[arg-type]
 
     def ask(self, question: str) -> Answer:
-        retr = self.retriever.search(question, self.top_k)
+        expanded = expand_question(question)
+        retr = self.retriever.search(expanded, self.top_k)
         top, mode = retr.top_score, retr.mode
         chunks = [h.chunk for h in retr.hits]
         if top is None:
@@ -111,9 +144,13 @@ class Engine:
             d = self.gate.decide(top)
             if not d.answer:
                 return self._refuse(question, d.reason, mode, top)
-        draft = self.generator.generate(question, chunks)
+        draft = self.generator.generate(expanded, chunks)
         if not draft.strip():
             return self._refuse(question, "no_answer_sentence", mode, top)
+        if self.use_gate:
+            lacking = missing_mandatory_terms(question, draft)
+            if lacking:
+                return self._refuse(question, "key_term_missing", mode, top, draft=draft)
         verification = verify_answer(draft, chunks)
         n_bad = verification.unsupported_fact_count
         if self.use_gate:

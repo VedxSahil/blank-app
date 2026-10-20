@@ -56,3 +56,13 @@ def test_stopwords_do_not_create_hits() -> None:
     # "what is the" are all stopwords; "waterfall" is absent -> no evidence at all.
     assert idx.search("what is the waterfall") == []
     assert [h.chunk.chunk_id for h in idx.search("what is the fee")] == ["t:p1:c1"]
+
+
+def test_plural_stem_makes_fees_match_fee() -> None:
+    from pereport.bm25 import stem
+
+    assert [stem(w) for w in ("fees", "fee", "gross", "class", "2021s", "is")] == [
+        "fee", "fee", "gross", "class", "2021s", "is",
+    ]  # fmt: skip
+    idx = BM25Index([_chunk(0, "management fee schedule")])
+    assert idx.search("what are the fees")[0].chunk.chunk_id == "t:p1:c0"
