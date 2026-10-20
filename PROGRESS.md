@@ -63,6 +63,15 @@ Defects found by tests and fixed this loop:
 - Process slips: two commits were made with a failing check because of `;` and `| tail` hiding the exit
   status. Both were fixed in the next commit; later commits gate on `make check` directly.
 
+## Figma (2026-10-20)
+Design file: https://www.figma.com/design/aqJtZ1gjUwugO2cEWavlgM ("PEReport UI screens"). Seven editable
+auto-layout frames: Ask answer and refusal (light and dark), Report Builder, Evaluation, Documents. Colours are
+variables in two collections (`PEReport tokens`, `PEReport tokens (dark)`; the starter plan allows one mode per
+collection). Read-back audit: 0 image fills, every solid fill bound to a variable. Content is bracketed placeholders
+and em dashes; no fund data. A first render showed clipped table cells (fixed 10 px height) and an overlapping
+header; fixed and re-rendered. Font is Inter, the closest to the app's system font stack. The frames were built to
+match the shipped web app, not the other way round, so the app remains the source of truth.
+
 ## Exit criteria status
 | Criterion | Status |
 |---|---|

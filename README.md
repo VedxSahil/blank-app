@@ -36,4 +36,6 @@ python scripts/download.py && python scripts/build_index.py
 python scripts/run_eval.py eval/gold.jsonl --freeze
 uvicorn pereport.api:app_from_disk --factory & (cd web && npm run build && npm run start)
 ```
+Design file (Figma): https://www.figma.com/design/aqJtZ1gjUwugO2cEWavlgM
+
 `docker-compose.yml` exists but is untested (no Docker daemon was available).
