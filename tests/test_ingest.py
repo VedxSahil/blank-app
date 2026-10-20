@@ -127,6 +127,11 @@ def _make_workbook(path: Path) -> None:
     ws["B7"] = "Footnote: an amount in this row needs a description, as explained here."
     ws["B8"] = "(=)"  # bare formula marker: dropped
     ws["H2"] = datetime.date(2022, 2, 23)  # date cell: never indexed
+    ws["B10"] = "Reconciliation for Carry"  # bold heading whose first item shares the row
+    ws["B10"].font = Font(bold=True)
+    ws["C10"] = "Starting period balance"
+    ws["E10"] = 5
+    ws["C11"] = "Carry accrued"
     wb.create_sheet("Defs")
     d = wb["Defs"]
     d["B2"], d["C2"], d["D2"] = "Section", "Field", "Definition"
@@ -158,6 +163,15 @@ def test_parse_xlsx_headings_line_items_numbers_and_defs(tmp_path: Path) -> None
     assert "Management Fees  (template line item in A.1 Reconciliation > Fees)" in t
     assert "Total Fees  (template line item in A.1 Reconciliation > Fees, calculated row)" in t
     assert any(ln.startswith("Footnote: an amount") for ln in t)  # long sentence stays a paragraph
+    # a bold heading with its first item on the same row opens a new block: later items belong to it
+    assert "# A.1 Reconciliation > Reconciliation for Carry" in t
+    assert (
+        "Starting period balance  (template line item in A.1 Reconciliation > Reconciliation for Carry)"
+        in t
+    )
+    assert (
+        "Carry accrued  (template line item in A.1 Reconciliation > Reconciliation for Carry)" in t
+    )
     joined = pages[0].text
     for bad in ("123456", "987654", "111111", "2022", "(=)"):
         assert bad not in joined  # values, dates and bare markers are not indexed

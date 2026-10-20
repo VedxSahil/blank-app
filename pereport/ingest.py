@@ -222,6 +222,17 @@ def _sheet_lines(ws: Any, include_numbers: bool) -> list[str]:
             if len(texts) > 1:
                 lines += [STRUCTURE_HEADER, "Column groups  " + " / ".join(texts[1:])]
             continue
+        first_col = next(c for c, v in row if isinstance(v, str))
+        if len(texts) >= 2 and bold.get(n, False) and first_col <= 3:
+            # A bold heading with its first item on the same row ("Reconciliation for X" in col B,
+            # "Beginning balance" in col C): the heading names the block, the rest are its items.
+            sub = texts[0]
+            lines += ["", f"# {context()}", STRUCTURE_HEADER]
+            need_header = False
+            for item in texts[1:]:
+                if len(item.split()) >= 2:  # skips column captions such as QTD / YTD / ITD
+                    lines.append(f"{item}  (template line item in {context()})")
+            continue
         if len(texts) >= 2:
             lines.append("  ".join(texts))
             continue
