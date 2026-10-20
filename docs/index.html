@@ -12,7 +12,7 @@ table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid 
 </style></head><body><main>
 <h1>Private Equity / Fund RAG Engine</h1>
 <div class="s">Fully client-side: no login, no API, no token cost. Document: <span id="doc"></span> (<span id="n"></span> chunks)</div>
-<div class="c"><h2>0. Load one or more documents (PDF or .txt; select several files together)</h2><input type="file" id="f" accept=".pdf,.txt" multiple onchange="load(this.files)"><div class="s" id="st">Processed locally in your browser; the file never leaves your device.</div></div>
+<div class="c"><h2>0. Load one or more documents (PDF or .txt; select several files together)</h2><input type="file" id="f" accept=".pdf,.txt" multiple onchange="load(this.files)"><button onclick="loadSample()">Load sample document (fictional Aurelian Peak Fund PPM)</button><div class="s" id="st">Processed locally in your browser; the file never leaves your device.</div></div>
 <div class="c"><input id="q" placeholder="Ask e.g. What are the fees? / redemption terms / risk factors / minimum investment" value="What are the management fees, performance fee and initial fee?">
 <div class="s" style="margin-top:8px"><label><input type="radio" name="mode" value="free" checked style="width:auto"> Option 1: Free report (offline, no tokens)</label><br>
 <label><input type="radio" name="mode" value="ai" style="width:auto"> Option 2: AI answer (uses your own Claude API key)</label></div>
@@ -57,10 +57,11 @@ let refusals=0;
 function support(q){const qs=[...new Set(tok(q))].filter(w=>w.length>=3&&!GENERIC.has(w));
 if(!C.length)return{ok:false,reason:'no document loaded'};
 if(!qs.length)return{ok:false,reason:'no searchable terms in the question'};
-const unseen=qs.filter(w=>!df[w]);
+const pre=new Set(Object.keys(df).map(w=>w.slice(0,5)));const seen=w=>df[w]||(w.length>=5&&pre.has(w.slice(0,5)));
+const unseen=qs.filter(w=>!seen(w));
 if(unseen.length)return{ok:false,reason:'term(s) not found in the documents: '+unseen.join(', ')};
 const h=hitsFor(q),u=new Set();h.forEach(c=>tok(c.text).forEach(w=>u.add(w)));
-const cov=qs.filter(w=>u.has(w)).length/qs.length;
+const up=new Set([...u].map(w=>w.slice(0,5)));const cov=qs.filter(w=>u.has(w)||(w.length>=5&&up.has(w.slice(0,5)))).length/qs.length;
 if(cov<0.6)return{ok:false,reason:'retrieved passages cover only '+Math.round(cov*100)+'% of the question terms'};
 return{ok:true,hits:h,cov}}
 function refuse(q,sp){refusals++;out.innerHTML='<div class="c"><h2>Not supported by the documents</h2><p>'+MISSING+' The loaded documents do not support an answer to this question, so none is given.</p><div class="s">Reason: '+esc(sp.reason)+'. Refusals this session: '+refusals+'.</div></div>'}
@@ -86,7 +87,7 @@ out.innerHTML=o}
 function fee(){document.getElementById('fc').style.display='block'}
 const num=x=>+String(x).replace(/,/g,'');
 function feeTerms(name){const cs=C.filter(c=>c.doc===name),r={tiers:[],perf:null,mgmt:null};
-cs.forEach(c=>{const t=c.text;let m;const re=/(\d+(?:\.\d+)?)\s?%\s+of the subscription amount\s+(up to|above|over)\s+USD\s?([\d,]+)/gi;
+cs.forEach(c=>{const t=c.text;let m;const re=/(\d+(?:\.\d+)?)\s?%\s+(?:of the subscription amount|for amounts)\s+(up to|above|over)\s+USD\s?([\d,]+)/gi;
 while((m=re.exec(t)))r.tiers.push({pct:+m[1],up:/up/i.test(m[2]),lim:num(m[3]),c});
 if(!r.perf&&(m=t.match(/(\d+(?:\.\d+)?)\s?%\s+of the positive (?:difference|amount|appreciation|return|increase)/i)))r.perf={pct:+m[1],c};
 if(!r.mgmt&&(m=t.match(/management fee[^.]{0,160}?(\d+(?:\.\d+)?)\s?(?:%|per ?cent)\s*(?:per annum|per year|p\.a\.|annually)/i)))r.mgmt={pct:+m[1],c}});return r}
@@ -117,6 +118,8 @@ const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||r.stat
 out.innerHTML='<div class="c"><h2>AI answer</h2><div style="white-space:pre-wrap">'+esc(j.content.map(b=>b.text||'').join(''))+'</div><div class="s">Generated from the retrieved passages only; verify against the document.</div></div>'}
 catch(e){out.innerHTML='<div class="c m">Error: '+esc(String(e.message))+'</div>'}}
 
+async function loadSample(){try{const r=await fetch('sample/Aurelian_Peak_Fund_Sample_PPM.pdf');if(!r.ok)throw new Error(r.status);
+const b=await r.blob();await load([new File([b],'Aurelian_Peak_Fund_Sample_PPM.pdf')])}catch(e){el('st').textContent='Sample could not be loaded here ('+e.message+'). Use the file chooser instead.'}}
 async function runEval(f){if(!f)return;let g;try{g=JSON.parse(await f.text())}catch(e){el('ev').innerHTML='<p class="m">Invalid JSON</p>';return}
 if(!C.length){el('ev').innerHTML='<p class="m">Load the document(s) first.</p>';return}
 const rows=g.map(x=>{const sp=support(x.q),refused=!sp.ok,txt=sp.ok?sp.hits.map(c=>c.text).join(' '):'';let ok,type;

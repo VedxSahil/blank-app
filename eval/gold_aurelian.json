@@ -1,0 +1,176 @@
+[
+ {
+  "q": "When is the initial offer period?",
+  "answerable": true,
+  "expect": "1 March - 30 May 2030"
+ },
+ {
+  "q": "What is the management fee?",
+  "answerable": true,
+  "expect": "2% per annum of Class A Net Asset Value"
+ },
+ {
+  "q": "What is the performance profit allocation percentage?",
+  "answerable": true,
+  "expect": "20%"
+ },
+ {
+  "q": "What is the initial fee for amounts above USD 1,000,000?",
+  "answerable": true,
+  "expect": "1\\.0%"
+ },
+ {
+  "q": "What is the minimum subscription?",
+  "answerable": true,
+  "expect": "250,000"
+ },
+ {
+  "q": "How many Class A shares are offered?",
+  "answerable": true,
+  "expect": "5,000,000"
+ },
+ {
+  "q": "What is the maximum size of the fund?",
+  "answerable": true,
+  "expect": "USD 1 billion"
+ },
+ {
+  "q": "What notice is required for redemption?",
+  "answerable": true,
+  "expect": "45 Business Days"
+ },
+ {
+  "q": "What is the redemption gate?",
+  "answerable": true,
+  "expect": "10% gate"
+ },
+ {
+  "q": "What is the minimum residual holding after redemption?",
+  "answerable": true,
+  "expect": "5,000"
+ },
+ {
+  "q": "What is the Zandrian tax rate on net income?",
+  "answerable": true,
+  "expect": "15%"
+ },
+ {
+  "q": "What is the effective tax rate on foreign-source income?",
+  "answerable": true,
+  "expect": "3%"
+ },
+ {
+  "q": "What is the net long exposure range?",
+  "answerable": true,
+  "expect": "25% and 75%"
+ },
+ {
+  "q": "What is the borrowing limit?",
+  "answerable": true,
+  "expect": "50% of assets"
+ },
+ {
+  "q": "What is the directors' remuneration?",
+  "answerable": true,
+  "expect": "1,500"
+ },
+ {
+  "q": "At what age do directors retire?",
+  "answerable": true,
+  "expect": "age 70"
+ },
+ {
+  "q": "When are semi-annual reports sent?",
+  "answerable": true,
+  "expect": "90 days"
+ },
+ {
+  "q": "What notice terminates the investment management agreement?",
+  "answerable": true,
+  "expect": "90 days"
+ },
+ {
+  "q": "What licence does the fund hold?",
+  "answerable": true,
+  "expect": "Category 1 Global Business Licence"
+ },
+ {
+  "q": "When was the fund incorporated?",
+  "answerable": true,
+  "expect": "15 February 2030"
+ },
+ {
+  "q": "Who is eligible to invest?",
+  "answerable": true,
+  "expect": "100,000"
+ },
+ {
+  "q": "How are establishment expenses reimbursed?",
+  "answerable": true,
+  "expect": "2 million"
+ },
+ {
+  "q": "What is the tax on interest income?",
+  "answerable": true,
+  "expect": "20%"
+ },
+ {
+  "q": "What is the par value of Class B shares?",
+  "answerable": true,
+  "expect": "0\\.01"
+ },
+ {
+  "q": "Who are the auditors?",
+  "answerable": true,
+  "expect": "Whitmore"
+ },
+ {
+  "q": "Who is the custodian?",
+  "answerable": true,
+  "expect": "Continental Trust Bank"
+ },
+ {
+  "q": "What is the fund's net IRR?",
+  "answerable": false
+ },
+ {
+  "q": "What is the DPI of the fund?",
+  "answerable": false
+ },
+ {
+  "q": "What is the RVPI?",
+  "answerable": false
+ },
+ {
+  "q": "What is the TVPI?",
+  "answerable": false
+ },
+ {
+  "q": "What is the fund vintage year?",
+  "answerable": false
+ },
+ {
+  "q": "Who are the top 3 portfolio companies by valuation?",
+  "answerable": false
+ },
+ {
+  "q": "What was the NAV per share in Q3 2026?",
+  "answerable": false
+ },
+ {
+  "q": "What is the fund's ESG rating?",
+  "answerable": false
+ },
+ {
+  "q": "What is the carried interest hurdle rate?",
+  "answerable": false
+ },
+ {
+  "q": "How much capital has been called to date?",
+  "answerable": false
+ },
+ {
+  "q": "What is the MOIC of the fund?",
+  "answerable": false
+ }
+]
