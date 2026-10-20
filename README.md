@@ -1,25 +1,12 @@
-# 🎈 Blank app template
+# PEReport — Fund Document Assistant
 
-A simple Streamlit app template for you to modify!
+RAG over private-fund documents: section-tagged chunking, BM25 retrieval with citations, a refusal rule for unsupported
+questions, fee arithmetic computed in code, a quarterly-style report draft and a validation harness.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+* `pe_engine.py` — the engine (stdlib + pypdf). CLI: `python pe_engine.py doc.pdf eval/gold_aurelian.json`
+* `streamlit_app.py` — the web app: `pip install -r requirements.txt && streamlit run streamlit_app.py`
+* `docs/index.html` — the same pipeline as a single static page (no server)
+* `docs/sample/` — a fictional sample PPM (Aurelian Peak Fund); `eval/gold_aurelian.json` — its 37-question validation set
+* `report/` — project report sources
 
-### How to run it on your own machine
-
-Prerequisite: install `uv` if you don't already have it.
-
-```
-$ curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-1. Sync the dependencies
-
-   ```
-   $ uv sync
-   ```
-
-2. Run the app
-
-   ```
-   $ uv run streamlit run streamlit_app.py
-   ```
+Deploy publicly: share.streamlit.io → New app → this repo, branch `claude/stoic-edison-nxyb7y`, main file `streamlit_app.py`.
