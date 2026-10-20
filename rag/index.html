@@ -22,6 +22,9 @@ table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid 
 <div id="fc" class="c" style="display:none"><h2>Verified calculation (computed in code, not predicted)</h2>
 Subscription USD <input id="amt" type="number" value="1500000" style="width:160px"> NAV growth % <input id="g" type="number" value="10" style="width:80px">
 <button onclick="calc()">Calculate</button><div id="co"></div></div>
+<div class="c"><h2>Validation: score accuracy on a fixed question set</h2>
+<div class="s">Load a JSON file: [{"q":"question","answerable":true,"expect":"regex that must appear in the retrieved text"}, {"q":"...","answerable":false}]. Unanswerable questions must be refused.</div>
+<input type="file" id="gf" accept=".json" onchange="runEval(this.files[0])"><div id="ev"></div></div>
 <div id="out"></div></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -45,9 +48,22 @@ else pages=(await f.text()).split('\f');
 chunkPages(pages,f.name)}el('st').textContent='Indexed '+C.length+' chunks from '+D.doc+' in your browser. Nothing is uploaded.'}
 const MISSING='<span class="m">[Data Point Missing from Sources]</span>';
 const STOP=new Set('the a an of and or to in is are what for on with by be as at this that it from which who how'.split(' '));
-const tok=s=>s.toLowerCase().match(/[a-z0-9]+/g).filter(w=>!STOP.has(w));
+const stem=w=>w.length>4&&w.endsWith('s')&&!w.endsWith('ss')?w.slice(0,-1):w;
+const tok=s=>(s.toLowerCase().replace(/\bnav\b/g,'net asset value').match(/[a-z0-9]+/g)||[]).filter(w=>!STOP.has(w)).map(stem);
 const docs=()=>[...new Set(C.map(c=>c.doc))];
 function hitsFor(q){const d=docs();return d.length>1?d.flatMap(n=>search(q,3,n)):search(q,5)}
+const GENERIC=new Set('what who how much many does did have has been date will shall per often long when where which whom whose give tell show list name start begin'.split(' '));
+let refusals=0;
+function support(q){const qs=[...new Set(tok(q))].filter(w=>w.length>=3&&!GENERIC.has(w));
+if(!C.length)return{ok:false,reason:'no document loaded'};
+if(!qs.length)return{ok:false,reason:'no searchable terms in the question'};
+const unseen=qs.filter(w=>!df[w]);
+if(unseen.length)return{ok:false,reason:'term(s) not found in the documents: '+unseen.join(', ')};
+const h=hitsFor(q),u=new Set();h.forEach(c=>tok(c.text).forEach(w=>u.add(w)));
+const cov=qs.filter(w=>u.has(w)).length/qs.length;
+if(cov<0.6)return{ok:false,reason:'retrieved passages cover only '+Math.round(cov*100)+'% of the question terms'};
+return{ok:true,hits:h,cov}}
+function refuse(q,sp){refusals++;out.innerHTML='<div class="c"><h2>Not supported by the documents</h2><p>'+MISSING+' The loaded documents do not support an answer to this question, so none is given.</p><div class="s">Reason: '+esc(sp.reason)+'. Refusals this session: '+refusals+'.</div></div>'}
 function search(q,k=5,only){const qs=tok(q);return C.map((c,i)=>{if(only&&c.doc!==only)return[0,c];let s=0;const t=T[i];const tf={};t.forEach(w=>tf[w]=(tf[w]||0)+1);
 qs.forEach(w=>{if(!tf[w])return;const idf=Math.log(1+(N-df[w]+.5)/(df[w]+.5));s+=idf*tf[w]*2.2/(tf[w]+1.2*(.25+.75*t.length/avg))});
 if(c.section.toLowerCase().split(/\W+/).some(w=>qs.includes(w)&&w.length>3))s*=1.3;return[s,c]}).filter(x=>x[0]>0).sort((a,b)=>b[0]-a[0]).slice(0,k).map(x=>x[1])}
@@ -59,7 +75,7 @@ function kpi(q){const all=C.map(c=>c.text).join(' ');const g=(re)=>{const m=all.
 const mi=C.find(c=>/minimum (initial )?(investment|subscription)[^.]{0,60}USD ?[\d,]+/i.test(c.text));
 const v=(re)=>/\b(DPI|RVPI|IRR)\b/.test(all)?null:null;
 return[['Vintage',MISSING],['Commitments (minimum investment)',mi?esc(mi.text.match(/minimum (initial )?(investment|subscription)[^.]{0,60}USD ?[\d,]+/i)[0])+' '+src(mi):MISSING],['DPI',MISSING],['RVPI',MISSING],['Net IRR',MISSING]]}
-function run(){const q=document.getElementById('q').value;const h=hitsFor(q);const f=facts(h);
+function run(){const q=document.getElementById('q').value;const sp=support(q);if(!sp.ok){refuse(q,sp);return}const h=sp.hits;const f=facts(h);
 if(!h.length){out.innerHTML='<div class="c">'+MISSING+'</div>';return}
 const sec=[...new Set(h.map(c=>c.section))];
 let o=`<div class="c"><h2>1. Executive Summary</h2><p>This report responds to the query "${esc(q)}" using the ${D.doc}. The most relevant disclosures appear in ${sec.slice(0,3).join('; ')} ${src(h[0])}. Performance metrics such as DPI, RVPI and Net IRR are not disclosed in the source and are not estimated.</p></div>`;
@@ -89,7 +105,7 @@ const row=(l,i)=>'<tr><td>'+l+'</td>'+cols.map(c=>'<td>'+(i?c[i]:'<b>'+esc(c[0])
 const tot=cols.map(c=>c).length;
 co.innerHTML='<div style="overflow-x:auto"><table>'+row('Document',0)+row('Initial fee',1)+row('Performance allocation',2)+row('Management fee (annual)',3)+'</table></div><div class="s">Terms are read from each document by pattern; computed in code on USD '+fmt(a)+' and '+(g*100)+'% growth. Hurdles and high-water marks are not modelled; verify against the source.</div>'}
 async function go(){const m=document.querySelector('input[name=mode]:checked').value;if(m==='free')return run();
-const q=el('q').value,h=hitsFor(q),k=el('key').value.trim();
+const q=el('q').value,sp=support(q);if(!sp.ok){refuse(q,sp);return}const h=sp.hits,k=el('key').value.trim();
 if(!k){out.innerHTML='<div class="c">Enter your Claude API key for Option 2, or choose Option 1.</div>';return}
 if(!h.length){out.innerHTML='<div class="c">'+MISSING+'</div>';return}
 out.innerHTML='<div class="c">Asking Claude (top '+h.length+' passages only, to keep tokens low)...</div>';
@@ -100,5 +116,18 @@ messages:[{role:'user',content:'PASSAGES:\n'+ctx+'\n\nQUESTION: '+q}]})});
 const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||r.status);
 out.innerHTML='<div class="c"><h2>AI answer</h2><div style="white-space:pre-wrap">'+esc(j.content.map(b=>b.text||'').join(''))+'</div><div class="s">Generated from the retrieved passages only; verify against the document.</div></div>'}
 catch(e){out.innerHTML='<div class="c m">Error: '+esc(String(e.message))+'</div>'}}
+
+async function runEval(f){if(!f)return;let g;try{g=JSON.parse(await f.text())}catch(e){el('ev').innerHTML='<p class="m">Invalid JSON</p>';return}
+if(!C.length){el('ev').innerHTML='<p class="m">Load the document(s) first.</p>';return}
+const rows=g.map(x=>{const sp=support(x.q),refused=!sp.ok,txt=sp.ok?sp.hits.map(c=>c.text).join(' '):'';let ok,type;
+if(x.answerable){const m=new RegExp(x.expect,'i').test(txt);ok=!refused&&m;type=refused?'false refusal':m?'correct answer':'wrong answer'}
+else{ok=refused;type=refused?'correct refusal':'unsupported answer given'}return{q:x.q,a:x.answerable,ok,type,why:sp.reason||''}});
+const n=rows.length,A=rows.filter(r=>r.a),U=rows.filter(r=>!r.a),pct=(a,b)=>b?(100*a/b).toFixed(1)+'%':'n/a';
+const right=A.filter(r=>r.ok).length,cref=U.filter(r=>r.ok).length,fref=A.filter(r=>r.type==='false refusal').length,bad=U.length-cref;
+const sum=[['Questions',n],['Overall accuracy (correct answer or correct refusal)',pct(rows.filter(r=>r.ok).length,n)],
+['Auto-answered correctly / all questions (coverage)',right+' / '+n+' = '+pct(right,n)],['Answerable questions answered correctly',right+' / '+A.length+' = '+pct(right,A.length)],
+['Refusals counted (correct + false)',(cref+fref)+' ('+cref+' correct, '+fref+' false)'],['Unanswerable questions wrongly answered',bad+' / '+U.length+' = '+pct(bad,U.length)]];
+window.evalRows=rows;
+el('ev').innerHTML='<table>'+sum.map(r=>'<tr><td>'+r[0]+'</td><td><b>'+r[1]+'</b></td></tr>').join('')+'</table><div style="overflow-x:auto"><table><tr><th>#</th><th>Question</th><th>Expected</th><th>Result</th><th>Reason</th></tr>'+rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.q)+'</td><td>'+(r.a?'answer':'refuse')+'</td><td'+(r.ok?'':' class="m"')+'>'+r.type+'</td><td class="s">'+esc(r.why)+'</td></tr>').join('')+'</table></div>'}
 document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')go()});
 </script></body></html>

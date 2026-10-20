@@ -1,0 +1,4 @@
+[
+ {"q": "What is the management fee?", "answerable": true, "expect": "per annum"},
+ {"q": "What is the fund's net IRR?", "answerable": false}
+]
