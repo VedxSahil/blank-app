@@ -1,0 +1,289 @@
+#EXECUTIVE SUMMARY
+Private funds describe their fees, redemption rights, valuation rules and risks in long offering documents, and investors repeatedly ask the same questions about them. Finding and verifying one term is slow, and a misread figure can mislead an investor. Retrieval-Augmented Generation (RAG) answers a question from retrieved passages of the source, but conventional implementations are costly in tokens, send documents to external servers and leave arithmetic to a model that predicts text and does not calculate.
+This project builds PEReport, a fund document assistant that runs entirely in a web browser. It cleans the text of one or more PDF or text documents, divides it into passages tagged by document, section and page, ranks them against a question with the Okapi BM25 method and produces a report with an executive summary, a table of key performance indicators and observations. Every figure is cited. When the documents do not support a question, the system refuses and counts the refusal, and a figure that is absent is shown as "[Data Point Missing from Sources]" and never estimated. A fee calculator reads the fee terms from each document and computes the fees in code, and an optional mode sends only five passages to a Claude model using the user's own key.
+The study asks how much of an investor's quarterly question set can be answered from fund documents automatically. On a fixed set of 37 questions about the fictional 20-page Aurelian Peak Fund Private Placement Memorandum, of which 26 the document can answer and 11 it cannot, accuracy was 86.5%. Twenty-two questions (59.5%) were answered correctly and automatically, which is 84.6% of the answerable ones, and ten of the eleven unanswerable questions were refused. A cross-check on a confidential 73-page PPM gave 84.8% accuracy and 54.5% coverage. The fee calculator gave exact results for four test amounts.
+The study also found limits. Two answerable questions were wrongly refused, two were answered from the wrong passage and one unanswerable question was answered from unrelated text. Retrieval is keyword-based, fee extraction depends on wording, the evidence rests on two documents and an author-written question set, and DPI, RVPI and Net IRR appear in neither document, so they were tested only as refusals. For routine term-oriented questions, a lightweight local pipeline can answer a little over half of a mixed question set, refuse most of the rest, and do so at negligible cost and with strong privacy, provided that output is checked against the cited page.
+@sig
+#CHAPTER 1: INTRODUCTION
+
+##1.1 Background of the Study
+Private funds, including hedge funds and private equity funds, communicate their legal and financial terms to investors through long and technically dense documents. The most important of these is the Private Placement Memorandum (PPM), which describes the structure of the fund, the investment strategy, the fee arrangements, the rights of investors, the procedure for subscription and redemption, the method of valuation and the risks involved. In addition, funds issue limited partnership agreements, side letters and periodic reports that restate or amend these terms. A single document of this kind frequently runs to seventy pages or more, written in formal legal English, and is read by analysts, investor-relations teams, compliance officers and prospective investors who need to locate a specific term quickly and accurately.
+Recent progress in natural language processing has produced a family of techniques known as Retrieval-Augmented Generation (RAG). In a RAG system the source documents are first divided into small passages and indexed. When a user asks a question, the most relevant passages are retrieved, and an answer is produced from those passages alone. Because the answer is grounded in retrieved text, each statement can be traced back to a page and section of the source, which is exactly the property that regulated financial communication demands.
+##1.2 The Problem Addressed
+Two practical obstacles limit the use of RAG in everyday fund-document work. The first is cost. A conventional implementation sends large amounts of document text to a hosted language model for every question, and the number of tokens consumed grows with the length of the document and the number of questions. For a seventy-page document that is queried repeatedly, this cost becomes significant. The second is confidentiality. Fund documents are frequently marked as confidential and not for circulation; uploading them to a third-party server for indexing may be prohibited by policy.
+A further problem is the reliability of numerical answers. Language models predict text rather than compute, and are therefore prone to arithmetic and rounding errors when asked to apply tiered percentages to an amount. In finance, a number that is almost right is wrong.
+##1.3 Overview of the Present Work
+This project designs, builds and evaluates PEReport, a fund document assistant for investor queries and for the drafting of a quarterly report from retrieved facts. The system is a single web page that runs entirely in the user's browser. The user selects one or more fund documents in PDF or text form; the page extracts the text, cleans it, divides it into section-tagged passages and builds a keyword index, all locally and without transmitting the document anywhere. The user can then ask a question and receive a structured report consisting of an executive summary, a table of key performance indicators, the quantitative terms found in the relevant passages and supporting excerpts. Every statement carries an inline citation giving the document name, section and page.
+Two guardrails distinguish the system from a plain search tool. If a required figure is not present in the source, the system prints the marker "[Data Point Missing from Sources]" instead of estimating it. If the loaded documents do not support an answer to the question at all, the system refuses to answer, states the reason and counts the refusal.
+The system was developed and tested on the Private Placement Memorandum of the Aurelian Peak Fund, a sample document of 20 pages dated 1 March 2030, in which the fund, its manager, its regulator and every figure are fictional. The document is organised in nineteen numbered sections and was divided into 40 passages. A second, confidential 73-page PPM of a real fund was used only for a cross-check, and none of its contents appears in this report. A validation harness scores the system on a fixed question set and counts correct answers, correct refusals, false refusals and unsupported answers.
+##1.4 Significance of the Study
+The study is significant in three respects. First, it demonstrates that a useful, citation-bearing RAG workflow does not necessarily require a server, a vector database or a paid model, which lowers the barrier for small advisory firms and students. Second, it shows a practical design for confidential documents, in which processing remains on the user's device. Third, it records, honestly, where a lightweight approach succeeds and where it fails, and thereby contributes a documented case to the discussion on the trade-off between cost, privacy and answer quality in financial document analysis.
+##1.5 Organisation of the Report
+Chapter 1 introduces the study. Chapter 2 states the scope and limitations. Chapter 3 sets out the objectives. Chapter 4 explains the research method. Chapter 5 describes the content of the project, that is, the architecture and implementation of the system. Chapter 6 presents the findings and discussion. Chapter 7 concludes the report with recommendations and directions for future work. The references follow, and two appendices give the validation question set with its results and the script for a three-minute demonstration.
+#CHAPTER 2: SCOPE AND LIMITATIONS OF THE STUDY
+
+##2.1 Scope of the Study
+The scope of this study covers the design, implementation and evaluation of a document question-answering, refusal and fee-calculation tool for private-fund documentation. The following areas fall within the scope.
+- Extraction of text from PDF and plain-text files within a web browser, and the cleaning of ligatures and non-standard characters so that the text is rendered in plain English.
+- Division of the text into passages of approximately nine hundred characters, with each passage tagged by its document, section heading and page number.
+- Retrieval of the passages most relevant to a user question using a keyword-ranking method with a section-title boost.
+- Generation of a structured report in the format of an executive summary, a table of key performance indicators and a list of observations, with citations for every figure.
+- A refusal rule that declines to answer when the documents do not support the question, and a counter of refusals.
+- Extraction of fee terms from uploaded documents and computation of the initial fee, the performance allocation and the annual management fee for an amount supplied by the user.
+- Support for more than one document at a time, so that terms of different funds can be viewed side by side.
+- An optional mode in which a hosted language model composes the answer from the retrieved passages.
+- Validation on a fixed set of 37 questions about the fictional Aurelian Peak Fund PPM, scoring accuracy, coverage and refusals, with a cross-check on a second document.
+##2.2 Limitations of the Study
+The study is subject to several limitations, which are stated plainly so that the findings are not over-interpreted.
+- Small evidence base. The main evaluation uses one fictional document of 20 pages, and the cross-check uses one real document. The results cannot be taken as evidence of equal performance on documents drafted in other styles.
+- Document type. Both test documents are offering memoranda, not quarterly reports. Neither contains a vintage year, Distributions to Paid-In capital (DPI), Residual Value to Paid-In capital (RVPI), Total Value to Paid-In capital (TVPI) or Net Internal Rate of Return (Net IRR). These metrics could therefore be tested only as questions that must be refused, and the drafting of a quarterly report from real performance figures could not be exercised.
+- Author-written question set. The 37 questions and their expected answers were written by the author, who also built the system. Two corrections to the system were made after seeing the first results, so the scores are somewhat optimistic. An independent question set would give a cleaner measure.
+- Keyword retrieval. The retrieval method is based on word matching and not on semantic embeddings. A question phrased with words that do not appear in the document may retrieve poorly or be refused even when the document contains the answer in different words.
+- Answer checking. A question is scored as correctly answered when the retrieved passages contain the expected text. This tests retrieval, not the wording of a generated answer.
+- Pattern-based fee extraction. Fee terms are found by regular expressions that recognise specific wordings. A document that expresses its fees in another form will be reported as missing the data point even though the fee exists.
+- Simplified fee model. The calculator applies the stated percentages to the amount entered. It does not model hurdle rates, high-water marks, the timing of crystallisation or the net-asset-value basis of the management fee. Its output is an illustration and is not financial advice.
+- Other limits. Scanned documents without a text layer cannot be read, complicated tables lose their layout, the optional language-model mode was not scored, and no user study was carried out.
+#CHAPTER 3: OBJECTIVES OF THE STUDY
+
+##3.1 Primary Objective
+The primary objective of this study is to design and implement a functional Retrieval-Augmented Generation system, named PEReport, that allows a user to ask questions about private-fund documents and to receive answers that are grounded in the source text, cited to the section and page, refused when unsupported, and produced at minimal or zero token cost.
+##3.2 Specific Objectives
+The specific objectives of the study are as follows.
+1. To examine the structure of a private placement memorandum and identify the categories of information, namely legal terms, fee and waterfall provisions, valuation rules, risk disclosures and performance metrics, that a RAG system should be able to retrieve.
+2. To develop a method of dividing a long financial document into section-tagged passages in such a way that each retrieved passage can be cited accurately to its page and section.
+3. To build a retrieval mechanism that works without a server or an external embedding service and can run inside a web browser.
+4. To introduce guardrails that prevent the system from inventing information, namely a rule that missing figures are reported as missing, a rule that every metric carries a citation and a formal, conservative tone of presentation.
+5. To ensure that numerical results are computed in program code and not predicted by a language model, and to verify the computed results against the figures stated in the source.
+6. To protect confidentiality by processing documents locally in the browser so that no document text leaves the user's device in the default mode.
+7. To enable the upload of several documents at one time so that the fee terms of more than one fund can be calculated and compared.
+8. To provide an optional language-model mode that limits token usage by sending only a small number of retrieved passages.
+9. To make the system refuse questions that the documents do not support, and to count the refusals.
+10. To score answer accuracy on a fixed question set and to measure what share of the set can be answered automatically.
+11. To report both the successes and the failures of the system candidly.
+##3.3 Research Questions
+The central research question of the study is: how much of an investor's quarterly question set can be answered from fund documents automatically? It is divided into the following questions. Can a browser-only keyword-based RAG pipeline retrieve the correct section of a fund document for common investor questions? Can fee terms be extracted from the text and applied in code to give results that agree with the document? How reliably does the system refuse a question that the document cannot answer, and how often does it refuse a question that it could have answered? What are the practical limits of a keyword approach compared with semantic retrieval?
+#CHAPTER 4: RESEARCH METHODOLOGY
+
+##4.1 Research Design
+The study follows a design-science approach. In design science, knowledge is produced by building an artefact that addresses a defined problem and then evaluating the artefact against stated criteria. The artefact here is the browser-based RAG system. The problem is the cost, confidentiality and reliability difficulty described in Chapter 1. The evaluation criteria are retrieval accuracy at the section level, arithmetic correctness, correct handling of missing data and compliance with the citation rule.
+The work proceeded in four iterative stages: understanding of the document and requirements, construction of a first working pipeline, evaluation and correction, and extension of the system with additional features. The iterations were driven by the test results. For example, the first version of the sentence splitter divided fee clauses at decimal points, so that "1.5%" was broken into "1" and "5%"; this fault was observed in testing and corrected by splitting only at full stops that follow a letter or a closing bracket. Further faults found during validation are listed in Chapter 6.
+##4.2 Data Source
+The primary data is the Private Placement Memorandum of the Aurelian Peak Fund, dated 1 March 2030. The document states that the fund, the Northwind Capital House manager and every person, regulator, law, licence and figure in it are fictional, and that it is a structural template for training, drafting practice and demonstration. The fund is described as a company incorporated under the laws of the fictional Republic of Zandria. The document has 20 pages and is organised into nineteen numbered sections, from Definitions to General and Statutory Information. Because it is fictional, it can be quoted freely in this report and published with the software.
+A second document, the Private Placement Memorandum of a real hedge fund of 73 pages dated 2008, was used for a cross-check. It is marked confidential and not for circulation, so it is neither named nor quoted in this report, and only aggregate scores from it are reported.
+Secondary data consists of published literature on information retrieval and retrieval-augmented generation, listed in the references.
+##4.3 Tools and Technologies
+The system uses only widely available technologies. The programme logic is written in JavaScript and runs in the browser. The pdf.js library from Mozilla is used to read PDF files and to obtain the text of each page. The retrieval ranking uses the Okapi BM25 formula. The optional language-model mode calls the Messages interface of the Anthropic API directly from the browser. The first prototype of the chunking step was written in Python with the pdftotext utility, and it served to cross-check the passage count of the browser version. Testing used Node.js to execute the page's script against the extracted text of the document.
+##4.4 The Five-Step Pipeline
+The system implements a five-step pipeline, specified at the start of the project and followed throughout.
+Step 1, dynamic chunking and extraction: the text is scanned, cleaned and divided into passages; qualitative narrative is separated from quantitative sentences by detecting percentages, currency amounts and periods of time.
+Step 2, semantic matching and retrieval: the question is compared with the passages and the best-matching sections are selected. In this study the matching is lexical, and a boost is given where a word in the question appears in the section title.
+Step 3, mathematical verification: any figure that must be computed is computed by program code, and the arithmetic is shown to tie back to the source percentages and thresholds.
+Step 4, guardrails: missing figures are reported as missing, every metric carries a citation, and the tone is formal.
+Step 5, output generation: the answer is formatted as an executive summary, a table of key performance indicators and observations.
+##4.5 Evaluation Procedure
+The evaluation had four parts. First, a fixed question set was written for the Aurelian Peak Fund document. It holds 37 questions: 26 that the document can answer, each with a short pattern that must appear in the retrieved text, and 11 that it cannot answer, which the system must refuse. The unanswerable questions ask for metrics and facts typical of a quarterly investor report, namely Net IRR, DPI, RVPI, TVPI, vintage year, top portfolio companies by valuation, net asset value per share for a future quarter, an ESG rating, a carried-interest hurdle rate, capital called to date and the multiple on invested capital.
+Second, each question was scored. An answerable question counts as correct if the system does not refuse and the retrieved passages contain the expected text. An unanswerable question counts as correct if the system refuses. The scoring reports overall accuracy, coverage (the number of questions answered correctly and automatically divided by all questions, which answers the research question), the share of answerable questions answered correctly, the number of refusals separated into correct and false refusals, and the number of unanswerable questions wrongly answered.
+Third, a retrieval check put eight typical investor questions to the system and compared the sections returned in the top three with the section a human reader would consult, and a calculation check applied the fee calculator to four subscription amounts and compared the results with hand calculation. Fourth, the same scoring was run, unchanged, on a 33-question set written for the confidential document as a cross-check.
+##4.6 Ethical Considerations
+The confidential cross-check document was handled in a way that respects its restriction on circulation. It was not uploaded to any external service, is not stored in the public repository and is not named or quoted in this report. The published version of the application contains only the fictional sample document, which the user may load with a single button, or the user may supply any other document, which is then processed locally.
+#CHAPTER 5: CONTENT OF THE PROJECT
+
+##5.1 System Overview
+The project delivers a single-page web application. The application is distributed as one HTML file, which can be opened from a computer, hosted on any static web server, or published as a hosted page. No database, application server or build step is needed. The page contains four functional areas: a document loader, a question box with a choice of two answer modes, a fee calculator and a results panel.
+##5.2 Architecture
+The architecture is organised in layers. The ingestion layer receives the files, extracts text and cleans it. The indexing layer divides the text into passages and builds the statistics needed for ranking. The retrieval layer scores passages against a question. The reasoning layer, which is either the rule-based report builder or the optional language model, produces the answer. The computation layer holds the fee extraction and arithmetic. The presentation layer renders the result with citations. The layers communicate through a single in-memory list of passages, each of which has a document name, a section label, a page number and its text.
+@table Table 5.1: Layers of the system|Layer|Function|Technique
+Ingestion|Read PDF or text files; join text items into lines; remove odd glyphs|pdf.js; Unicode normalisation (NFKC); character filtering
+Indexing|Split into passages of about 900 characters; tag with section and page|Paragraph grouping; Roman-numeral heading detection
+Retrieval|Rank passages against the question|Okapi BM25; section-title boost of 1.3
+Refusal|Decline unsupported questions and count refusals|Term-presence test; 60% coverage test
+Reasoning|Compose report or narrative|Rule-based template; optional Claude model
+Computation|Extract fee terms and compute fees|Regular expressions; JavaScript arithmetic
+Presentation|Show report with citations and missing-data markers|HTML table and lists
+##5.3 Document Ingestion and Cleaning
+For a PDF file, the page text is obtained from pdf.js as a list of text items, each with a position. The items are joined into lines by comparing their vertical positions: a small change in position is treated as the same line, a moderate change as a new line, and a larger change as a paragraph break. This reconstruction is necessary because the reading order of the raw items does not by itself preserve paragraphs. For a plain-text file the pages are separated at form-feed characters.
+The extracted text of many PDF files contains characters that look unreadable when displayed, for instance typographic ligatures such as the combined "fi" and "fl" glyphs, curved quotation marks and special dashes. A user who sees these as strange symbols may describe the text as being in an unknown language. The cleaning function therefore applies Unicode compatibility normalisation, which converts ligatures into ordinary letters, replaces curved quotation marks and dashes with their plain equivalents, and substitutes a space for any remaining character outside the printable range. The result is plain English text that can be searched and displayed reliably.
+##5.4 Section Detection and Chunking
+The test documents use Roman numerals for their main sections. A heading is recognised when a line begins with a Roman numeral from I to XIX, a full stop and a short title containing letters, and does not end with a page number, which distinguishes a heading from a line in the table of contents. A line that contains several numerals, as in a table of contents printed on one line, is rejected. The most recent heading is attached to each passage as its section label, and passages that precede the first heading are labelled front matter.
+Within each page, the text is divided into paragraphs at blank lines, and the heading lines are also treated as boundaries, so that a passage never mixes two sections. Short fragments below forty characters are discarded as noise. Consecutive paragraphs are combined until a passage reaches about nine hundred characters, and then a new passage begins. This size is a compromise: shorter passages give precise citations but may separate a rule from its exception, while longer passages carry more context but dilute the ranking. The procedure yielded 40 passages from the 20-page Aurelian Peak Fund document.
+##5.5 Indexing and Retrieval
+Each passage and its section title are converted into lower-case word tokens, the abbreviation "NAV" is expanded to "net asset value", a trailing plural "s" is removed, and common words such as "the", "of" and "is" are removed. The system counts, for every word, the number of passages that contain it, which gives the document frequency used to weight rare words more heavily. The ranking uses Okapi BM25, which scores a passage by summing, over the words of the question, a term that increases with the frequency of the word in the passage but saturates, and that is reduced for longer passages. In the notation used in the literature, the inverse document frequency is ln(1 + (N - n + 0.5) / (n + 0.5)), and the term weight is multiplied by tf x (k1 + 1) / (tf + k1 x (1 - b + b x length / average length)), with k1 set to 1.2 and b to 0.75. A passage whose section title contains a word of the question longer than three letters has its score multiplied by 1.3, so that a question about fees favours the section called Fees and Expenses.
+When more than one document has been loaded, the system retrieves the top three passages from each document separately, so that every document is represented in the answer. With a single document, the top five passages are returned.
+##5.6 The Report Generator and Guardrails
+The report follows the format required by the specification. The executive summary is a formal narrative that states the question, the sections in which the most relevant disclosures were found and a statement that performance metrics not disclosed in the source are not estimated. The table of key performance indicators lists the vintage, the commitments, the DPI, the RVPI and the Net IRR. For the commitments row the system looks for a statement of the minimum investment and cites it; for the remaining rows it checks the document and prints the missing-data marker when the figure does not exist.
+The quantitative terms are extracted by selecting from the retrieved passages those sentences that contain a percentage, an amount in dollars or a period expressed in days, months or years. Narrative observations are the leading excerpts of the retrieved passages. Three guardrails are enforced. Missing figures are replaced by the marker "[Data Point Missing from Sources]". Each figure and excerpt is followed by a citation of the form [Source: document, section, page]. The wording is formal and conservative, and the page reminds the reader to verify results against the source.
+##5.7 The Refusal Rule
+The refusal rule decides whether the loaded documents support a question at all. The question is reduced to its content words, leaving out common question words such as "what", "who" and "how" and a short list of generic words. Two tests are then applied. In the first test, every content word must occur in the documents, either exactly or sharing its first five letters with a word in the documents, which allows "retire" to match "retirement". If any word is absent, the system refuses and names the missing term. This is why a question about the DPI is refused with the reason that the term "dpi" is not found in the documents. In the second test, the retrieved passages must contain at least sixty per cent of the content words of the question. If they contain fewer, the system refuses and reports the percentage covered.
+When the system refuses, it shows a card stating that the documents do not support an answer, the reason, and the number of refusals in the session. The rule is deliberately strict, because for financial communication a missing answer is safer than an invented one. Its weakness is that it tests the presence of words and not of meaning: a question whose words all occur in the document, but in an unrelated context, will pass the rule and will be answered from passages that do not answer it.
+##5.8 Fee Extraction and Calculation
+The fee calculator reads the terms from each loaded document and so does not depend on a particular fund. Three patterns are applied. The first finds initial-fee tiers of the form "X% of the subscription amount up to USD N" or "X% for amounts up to USD N", and the corresponding "above" tier. The second finds a performance allocation of the form "X% of the positive difference", "amount" or "appreciation". The third finds a management fee of the form "management fee ... X% per annum", accepting both "percent" and "per cent".
+Given a subscription amount, the calculator selects the lowest "up to" tier whose limit is not less than the amount, or otherwise the "above" tier that applies. It then multiplies the amount by the percentage. The performance allocation is the percentage applied to the positive part of the assumed growth in the amount, and the management fee is the percentage of the amount for one year. The output is a table with one column for each document, and each cell gives the amount, the percentage used and the citation. If a pattern is not found, the cell shows the missing-data marker.
+@table Table 5.2: Fee terms found in the Aurelian Peak Fund document|Term|Value found
+Initial fee, amounts up to USD 499,999|2.0% of the subscription
+Initial fee, amounts up to USD 999,999|1.5% of the subscription
+Initial fee, amounts above USD 1,000,000|1.0% of the subscription
+Performance profit allocation|20% of the positive difference above the Reference Price, subject to the High Water Mark
+Management fee|2% per annum of Class A Net Asset Value, monthly in arrears
+Minimum subscription|USD 250,000
+Offer|Up to 5,000,000 Class A Shares at USD 100, 1 March to 30 May 2030
+Redemption|Quarterly, 45 Business Days notice, 10% gate
+##5.9 The Two Answer Modes
+Mode 1 is the free report described above. It runs offline, uses no tokens and is the default. Mode 2 sends the question and the retrieved passages, each preceded by its document, section and page, to a Claude model through the Anthropic API. The system instruction requires the model to answer only from the passages, to use the three-part format, to write the missing-data marker for absent figures, to cite every metric and to use plain English. The number of output tokens is limited to 700. Because only the top few passages are sent, the cost of a query is a small, fixed amount unrelated to the length of the document. The key is entered by the user, held in the page and sent only to the API; it is not stored. This mode is optional, and it was not part of the quantitative evaluation.
+##5.10 User Interface and Deployment
+The interface has a file selector for several PDF or text files, a button that loads the fictional sample document, a question box, a choice between the two modes, a fee calculator and a panel for loading a validation question set. It adapts to light and dark colour schemes and to narrow screens. The page is a single file, published in the project repository as a static site together with the sample document, and also as a hosted page; it can be saved and opened offline. The scoring script can be run outside the browser with Node.js so that the validation can be repeated automatically.
+#CHAPTER 6: FINDINGS AND DISCUSSION
+
+##6.1 Characteristics of the Indexed Document
+The Aurelian Peak Fund document was converted into 40 passages. The distribution of the passages among the sections is shown in Table 6.1. All nineteen sections received a label, and five passages precede the first heading and are labelled front matter. The largest sections by passage count are Summary of Principal Terms with four passages and Key Information, Subscriptions and Definitions with three each. The sections most relevant to fee questions, namely Fees and Expenses and Summary of Principal Terms, contribute one and four passages respectively. The passages across all sections add up to 40, which confirms that none was left unlabelled.
+@table Table 6.1: Distribution of passages by section|Section|Passages
+Front matter|5
+I. Definitions|3
+II. Key Information|3
+III. Summary of Principal Terms|4
+IV. Investment Objective, Approach and Risk Management|2
+V. Investment Manager|1
+VI. Investment Advisor|1
+VII. Board of the Fund|1
+VIII. Administrator to the Fund|1
+IX. Custodian to the Fund|1
+X. Subscriptions|3
+XI. Redemptions|1
+XII. Net Asset Value|2
+XIII. Fees and Expenses|1
+XIV. Reports and Financial Statements|1
+XV. Conflicts of Interest|1
+XVI. Risk Factors|2
+XVII. Taxation|2
+XVIII. Legal and Regulatory Considerations|2
+XIX. General and Statutory Information|3
+Total|40
+##6.2 Retrieval Results
+Table 6.2 shows the sections returned at the top of the ranking for eight typical questions. For the seven questions that the document can answer, the relevant section appeared among the top three results in every case, and the first result was the relevant section in six of the seven. For the question on redemption terms, the first result was the front matter, which mentions redemption in the notices, and the Summary of Principal Terms followed in second place, so the correct material was present in the top two. For the custodian and administrator, the Custodian section was first; the Administrator section did not appear in the top three, so a user who needed both would have to ask separately.
+@table Table 6.2: Top retrieved sections for test questions|Question|Top results (section, page)|Assessment
+What are the fees?|Fees and Expenses p. 14; Front matter p. 1; Investment Objective p. 9|Correct first
+What are the redemption terms?|Front matter p. 1; Summary of Principal Terms p. 9; Taxation p. 17|Correct material in top two
+What is the minimum investment?|Summary of Principal Terms p. 8; Subscriptions p. 12; Key Information p. 7|Correct
+What are the risk factors?|Risk Factors p. 15; Front matter p. 1; Risk Factors p. 16|Correct
+How is NAV calculated?|Net Asset Value p. 13; Summary p. 8; Fees p. 14|Correct
+What taxation applies?|Taxation p. 17; Taxation p. 16; Front matter p. 1|Correct
+Custodian and administrator?|Custodian p. 11; Conflicts of Interest p. 15; Front matter p. 1|Custodian found; administrator missing
+DPI and Net IRR?|Refused: terms "dpi" and "irr" not found|Correct refusal
+##6.3 Validation on the Fixed Question Set
+Table 6.3 gives the result of scoring the system on the 37-question set. Overall accuracy, counting correct answers and correct refusals together, was 86.5%, that is 32 of 37 questions. The research question is answered by the coverage figure: 22 of the 37 questions, or 59.5%, were answered correctly and automatically. Because 11 of the questions cannot be answered from the document, the highest coverage that any system could reach on this set is 26 of 37, or 70.3%, and the system reached 84.6% of that ceiling. Of the 26 answerable questions, 22 were answered correctly, 2 were falsely refused and 2 were answered from the wrong passage. Of the 11 unanswerable questions, 10 were correctly refused and 1 was wrongly answered. The refusal counter therefore recorded 12 refusals, 10 correct and 2 false.
+@table Table 6.3: Validation results, Aurelian Peak Fund document|Measure|Result
+Questions in the fixed set|37 (26 answerable, 11 unanswerable)
+Overall accuracy|32 / 37 = 86.5%
+Answered correctly and automatically (coverage)|22 / 37 = 59.5%
+Answerable questions answered correctly|22 / 26 = 84.6%
+False refusals|2
+Wrong-passage answers|2
+Unanswerable questions correctly refused|10 / 11 = 90.9%
+Unanswerable questions wrongly answered|1 / 11 = 9.1%
+The full list of questions and results is given in Appendix A. The unanswerable questions about Net IRR, DPI, RVPI, TVPI, vintage year, ESG rating, carried-interest hurdle, net asset value per share in a future quarter and the multiple on invested capital were all refused because a key term is absent from the document, and the reason shown to the user names the term. This is the behaviour required for the demonstration of a refusal.
+##6.4 Analysis of the Failures
+The five failures fall into three kinds. The first kind is the false refusal. The question "What is the performance profit allocation percentage?" was refused because the word "percentage" is not in the document, which writes the figure with a percentage sign, and "What is the maximum size of the fund?" was refused because the document speaks of a size that will not exceed USD 1 billion and never uses the word "maximum". The refusal rule worked as designed, but a person would have considered both questions answerable. Synonym handling would reduce such errors.
+The second kind is the answer from the wrong passage. The question on the initial offer period and the question on who is eligible to invest retrieved passages that did not contain the dates or the eligibility test, although the document contains them in the Summary of Principal Terms and in the Definitions. Keyword ranking favoured other passages that repeat the words of the question more often.
+The third kind is the unsupported answer. The question on the top three portfolio companies by valuation was answered, because the words "portfolio", "companies" and "valuation" all occur in the document, in the context of the investment strategy and the valuation of assets. No portfolio companies are named in the document, so the answer shown to the user would consist of unrelated passages. This is the most serious failure for an investor-reporting system, since the user is given text that looks like an answer. It shows that the presence of words is not the same as the presence of an answer.
+##6.5 Accuracy of the Fee Calculation
+Four subscription amounts were tested with an assumed growth of ten per cent. The results are shown in Table 6.4, and each was confirmed by hand calculation from the percentages in Table 5.2.
+@table Table 6.4: Fee calculation test (USD, 10% assumed growth)|Subscription|Initial fee|Performance allocation|Annual management fee
+400,000|8,000 (2%)|8,000|8,000 (2%)
+800,000|12,000 (1.5%)|16,000|16,000 (2%)
+1,500,000|15,000 (1%)|30,000|30,000 (2%)
+2,000,000|20,000 (1%)|40,000|40,000 (2%)
+In each case the tier chosen was the correct one, the arithmetic was exact and each figure was accompanied by a citation to the section and page from which its percentage was taken. For an amount of USD 1,500,000, for example, the initial fee is 1.0% of the amount, that is USD 15,000; the performance allocation is 20% of the growth of USD 150,000, that is USD 30,000; and the management fee is 2% of the amount, that is USD 30,000 a year. This supports the design decision to compute numbers in program code: the results are deterministic and traceable, which a text-prediction model cannot guarantee.
+Two cautions apply. The performance allocation is defined above a reference price with a high-water mark, and the management fee is charged on net asset value, so the calculator gives an illustration and not an exact charge. Also, the first version of the extractor found only one of the three initial-fee tiers, because the document writes the second tier as "1.5% for amounts up to USD 999,999"; the pattern was widened afterwards, which confirms that extraction depends on wording.
+##6.6 Faults Found During Validation
+Validation exposed faults that would not have been found by reading the code. They are recorded here because they show the value of testing on more than one document. Table 6.5 lists them.
+@table Table 6.5: Faults found and corrected|Fault|Effect|Correction
+Section label assigned per page|On pages with several sections, passages took the label of the last heading on the page|Label updated paragraph by paragraph; headings act as boundaries
+Roman numeral XIX missing from the pattern|The final section was absorbed into section XVIII|Numeral added
+Headings skipped on the first three pages|Definitions were labelled as front matter|Headings accepted from page 2; lines with several numerals rejected
+Fee tiers found by one wording only|Two of three initial-fee tiers missed|Pattern widened to accept "for amounts up to"
+Word-form differences|"Percentage", "retire" and "terminate" caused false refusals|Words matched on their first five letters
+Abbreviation NAV|"NAV" not found because the documents write "net asset value"|Abbreviation expanded
+Decimal points in sentence splitting|"1.5%" split into two fragments|Split only after letters or closing brackets
+The first run on the Aurelian Peak Fund document scored 81.1% accuracy and 54.1% coverage; after the word-form correction it scored 86.5% and 59.5%. Because this correction was designed after seeing the first results on this document, the final scores are slightly optimistic. The section-labelling faults did not change the scores, since scoring tests the retrieved text and not the label, but they affected the citations that the user sees.
+##6.7 Cross-Check on a Second Document
+The same scoring was run, without further change, on a 33-question set written for the confidential 73-page PPM. Accuracy was 84.8%, coverage was 54.5% (18 of 33 questions), 81.8% of the answerable questions were answered correctly and 10 of the 11 unanswerable questions were refused. The pattern of the failures was similar: answers that sit in definitions or in directory pages were ranked too low, and one question whose words occur in an unrelated context was answered. The agreement of the two sets of scores, 54.5% and 59.5% coverage and 84.8% and 86.5% accuracy, suggests that the figures are not specific to one document, although both question sets were written by the same author and no firm conclusion can be drawn from two documents.
+##6.8 Effectiveness of the Guardrails
+The guardrails operated as intended in the tests. The missing-data marker appeared for the vintage, DPI, RVPI and Net IRR rows throughout, because these figures are not in the sources. Every figure shown in the report and in the calculator carried a citation. Ten of the eleven questions that cannot be answered were refused with a stated reason. The most important result for the user is that the system rarely produces an invented value when the source is silent, but the study also shows that "rarely" is not "never": one question received unrelated passages as an answer. The guardrails of the optional language-model mode depend on the compliance of the model with its instructions and were not tested systematically.
+##6.9 Discussion
+The results indicate that a lightweight pipeline can answer the common, term-specific questions about a fund document reasonably well and can refuse most of the questions that the document cannot support. The questions in the test tended to contain the same vocabulary as the document, such as fees, redemption, tax and notice, and the keyword ranking with a section boost was well suited to them. The numbered sections of the documents gave reliable labels to the passages once the labelling faults were corrected.
+The weaknesses lie where one would expect. Questions that depend on meaning rather than on shared words would be better served by semantic embeddings. The refusal rule tests words, not meaning, so it produced both false refusals and one unsupported answer. Pattern-based extraction is brittle, since every new drafting style may require new patterns, which is the main reason to consider combining the rule-based extraction with a language model for extraction when the user chooses to do so, while still computing the numbers in code.
+A further finding concerns the research question itself. Only 26 of the 37 questions could be answered from an offering memorandum, because the metrics that an investor asks for each quarter, such as DPI, RVPI and Net IRR, belong in the quarterly report and not in the offering document. The share of a real quarterly question set that can be answered therefore depends strongly on which documents are loaded. With a PPM alone, the ceiling on this set was 70.3%, and the system reached 59.5%; a measurement on real quarterly reports remains to be made.
+#CHAPTER 7: CONCLUSION
+
+##7.1 Conclusion
+This project set out to build a functional, economical and trustworthy RAG system for private-fund documents and to measure how much of an investor's question set it can answer automatically. The work reported here achieves the first aim within the stated limits and gives a first measurement for the second. A single web page, named PEReport, now reads one or more fund documents on the user's own device, cleans and divides them into section-tagged passages, retrieves the passages that match a question and presents a structured report in which every figure is cited and every absent figure is declared absent. It refuses questions that the documents do not support, and counts the refusals. A fee calculator extracts the fee terms from each document and computes the fees in code, and an optional mode lets a language model write a fluent answer from a small number of retrieved passages.
+On a fixed set of 37 questions about the Aurelian Peak Fund sample PPM, the system answered 59.5% of all questions correctly and automatically, reached 86.5% accuracy when correct refusals are counted, and refused ten of the eleven questions that the document cannot answer. A cross-check on a second document gave similar scores. The evaluation also showed honest limits: the refusal rule can refuse a question that has an answer and can pass a question that has none, retrieval misses answers that sit in definitions, extraction depends on wording, the fee model is simplified, and the evidence comes from two documents and a question set written by the author.
+##7.2 Recommendations
+- Treat the output as a research aid, and verify every figure against the cited page before it is used in any investor communication.
+- Replace the word-presence refusal rule with a test of meaning, for example a semantic similarity threshold, so that unrelated passages are not offered as answers and synonyms do not cause refusals.
+- Extend the fee patterns, and test them on documents from several funds before relying on the calculator.
+- Where policy allows, use the optional language-model mode for narrative answers while retaining the code-based calculation for all numbers.
+- Have the question set written or checked by someone other than the system's author before the scores are quoted as final.
+##7.3 Scope for Future Work
+- Semantic retrieval by means of embeddings generated in the browser, with a hybrid ranking that combines them with BM25, and separate indexing of the definitions section.
+- Documents that actually contain quarterly metrics, namely ILPA reporting templates, SEBI AIF disclosures and the quarterly reports of listed private-equity firms, so that DPI, RVPI, Net IRR and portfolio valuations can be extracted and the drafting of a quarterly report from retrieved facts can be tested on real figures.
+- Optical character recognition for scanned documents and reconstruction of tables into structured form.
+- A full distribution-waterfall model including preferred return, catch-up and carried interest, with the inputs drawn from the document.
+- A larger independent question set, with measures such as top-k accuracy, and a user study of time saved.
+- Automated regression tests and a confidence indicator for each extracted figure.
+#REFERENCES
+1. Lewis, P., Perez, E., Piktus, A., et al. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. Advances in Neural Information Processing Systems, 33.
+2. Robertson, S. and Zaragoza, H. (2009). The Probabilistic Relevance Framework: BM25 and Beyond. Foundations and Trends in Information Retrieval, 3(4), 333-389.
+3. Manning, C. D., Raghavan, P. and Schutze, H. (2008). Introduction to Information Retrieval. Cambridge University Press.
+4. Salton, G. and Buckley, C. (1988). Term-weighting approaches in automatic text retrieval. Information Processing and Management, 24(5), 513-523.
+5. Hevner, A. R., March, S. T., Park, J. and Ram, S. (2004). Design Science in Information Systems Research. MIS Quarterly, 28(1), 75-105.
+6. Mozilla Foundation. pdf.js: a general-purpose, web standards-based platform for parsing and rendering PDFs. https://mozilla.github.io/pdf.js/
+7. Anthropic. Claude API Documentation: Messages API. https://docs.anthropic.com
+8. The Unicode Consortium. Unicode Standard Annex #15: Unicode Normalization Forms.
+9. Institutional Limited Partners Association. ILPA Reporting Template. https://ilpa.org
+10. Securities and Exchange Board of India. SEBI (Alternative Investment Funds) Regulations, 2012. https://www.sebi.gov.in
+11. The Aurelian Peak Fund. Private Placement Memorandum - Sample Document, dated 1 March 2030 (fictional; for training and demonstration).
+#APPENDIX A: VALIDATION QUESTION SET AND RESULTS
+The questions below were scored by the validation harness against the Aurelian Peak Fund document. "Expected" shows whether the document can answer the question or the system must refuse it. "Result" shows what the system did.
+@table Table A.1: Fixed question set and result for each question|No.|Question|Expected|Result
+1|When is the initial offer period?|answer|wrong answer
+2|What is the management fee?|answer|correct answer
+3|What is the performance profit allocation percentage?|answer|false refusal
+4|What is the initial fee for amounts above USD 1,000,000?|answer|correct answer
+5|What is the minimum subscription?|answer|correct answer
+6|How many Class A shares are offered?|answer|correct answer
+7|What is the maximum size of the fund?|answer|false refusal
+8|What notice is required for redemption?|answer|correct answer
+9|What is the redemption gate?|answer|correct answer
+10|What is the minimum residual holding after redemption?|answer|correct answer
+11|What is the Zandrian tax rate on net income?|answer|correct answer
+12|What is the effective tax rate on foreign-source income?|answer|correct answer
+13|What is the net long exposure range?|answer|correct answer
+14|What is the borrowing limit?|answer|correct answer
+15|What is the directors' remuneration?|answer|correct answer
+16|At what age do directors retire?|answer|correct answer
+17|When are semi-annual reports sent?|answer|correct answer
+18|What notice terminates the investment management agreement?|answer|correct answer
+19|What licence does the fund hold?|answer|correct answer
+20|When was the fund incorporated?|answer|correct answer
+21|Who is eligible to invest?|answer|wrong answer
+22|How are establishment expenses reimbursed?|answer|correct answer
+23|What is the tax on interest income?|answer|correct answer
+24|What is the par value of Class B shares?|answer|correct answer
+25|Who are the auditors?|answer|correct answer
+26|Who is the custodian?|answer|correct answer
+27|What is the fund's net IRR?|refuse|correct refusal
+28|What is the DPI of the fund?|refuse|correct refusal
+29|What is the RVPI?|refuse|correct refusal
+30|What is the TVPI?|refuse|correct refusal
+31|What is the fund vintage year?|refuse|correct refusal
+32|Who are the top 3 portfolio companies by valuation?|refuse|unsupported answer given
+33|What was the NAV per share in Q3 2026?|refuse|correct refusal
+34|What is the fund's ESG rating?|refuse|correct refusal
+35|What is the carried interest hurdle rate?|refuse|correct refusal
+36|How much capital has been called to date?|refuse|correct refusal
+37|What is the MOIC of the fund?|refuse|correct refusal
+#APPENDIX B: DEMONSTRATION SCRIPT (THREE MINUTES)
+Preparation. Open the PEReport page and click "Load sample document". The status line reports the number of passages indexed (40). Leave the mode on Option 1, the free report.
+Minute one, a supported question. Type "What are the management fee, performance fee and initial fee?" and press Generate Report. Point out the executive summary, the KPI table in which DPI, RVPI and Net IRR are shown as missing, the extracted terms with citations such as the section and page, and the fact that no figure appears without a source.
+Minute two, a calculation. Press "Fee calculator", enter a subscription of 1,500,000 and growth of 10 per cent, and press Calculate. The initial fee of USD 15,000, the performance allocation of USD 30,000 and the management fee of USD 30,000 a year appear with their citations. State that the arithmetic is done in code and not predicted by a model.
+Minute three, a refusal. Type "What is the fund's net IRR?" and press Generate Report. The system answers that the documents do not support an answer, names the missing term "irr" and shows the number of refusals so far. Say that the same applies to DPI, RVPI, vintage and the other eleven unanswerable questions in the validation set.
