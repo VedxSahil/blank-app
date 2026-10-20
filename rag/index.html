@@ -33,12 +33,13 @@ const el=id=>document.getElementById(id);
 function build(){C=D.chunks;T=C.map(c=>tok(c.text+' '+c.section));N=C.length||1;avg=T.reduce((a,t)=>a+t.length,0)/N||1;df={};
 T.forEach(t=>new Set(t).forEach(w=>df[w]=(df[w]||0)+1));el('doc').textContent=D.doc;el('n').textContent=C.length}
 const clean=t=>t.normalize('NFKC').replace(/[\u2019]/g,"'").replace(/[\u201c\u201d]/g,'"').replace(/[\u2013]/g,'-').replace(/[^\x20-\x7E\n]/g,' ').replace(/[ \t]+/g,' ');
-const ROM=/^\s*(XVIII|XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I)\.\s+(.+?)\s*$/;
+const ROM=/^\s*(XVIII|XIX|XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I)\.\s+(.+?)\s*$/;
 function chunkPages(pages,name){const ch=[];let sec='Front matter';
-pages.forEach((pg,i)=>{pg=clean(pg);if(i>2)pg.split('\n').forEach(l=>{const m=l.match(ROM);if(m&&/[A-Za-z]{4}/.test(m[2])&&!/\d\s*$/.test(m[2]))sec='Section '+m[1]+': '+m[2]});
-let buf='';pg.split(/\n\s*\n/).map(p=>p.replace(/\s*\n\s*/g,' ').trim()).filter(p=>p.length>40).forEach(p=>{
-if(buf.length+p.length>900&&buf){ch.push({doc:name,page:i+1,section:sec,text:buf});buf=''}buf+=(buf?' ':'')+p});
-if(buf)ch.push({doc:name,page:i+1,section:sec,text:buf})});D.chunks=D.chunks.concat(ch);D.doc=[...new Set(D.chunks.map(c=>c.doc))].join(' + ');build();return ch.length}
+pages.forEach((pg,i)=>{pg=clean(pg);let buf='';const flush=()=>{if(buf){ch.push({doc:name,page:i+1,section:sec,text:buf});buf=''}};
+const add=p=>{p=p.replace(/\s*\n\s*/g,' ').trim();if(p.length<=40)return;if(buf.length+p.length>900&&buf)flush();buf+=(buf?' ':'')+p};
+pg.split(/\n\s*\n/).forEach(par=>{let cur=[];par.split('\n').forEach(l=>{const m=i>0?l.match(ROM):null;
+if(m&&m[2].length<70&&!/\s[IVX]+\.\s/.test(m[2])&&/[A-Za-z]{4}/.test(m[2])&&!/\d\s*$/.test(m[2])){add(cur.join(' '));cur=[];flush();sec='Section '+m[1]+': '+m[2]}else cur.push(l)});add(cur.join(' '))});flush()});
+D.chunks=D.chunks.concat(ch);D.doc=[...new Set(D.chunks.map(c=>c.doc))].join(' + ');build();return ch.length}
 async function load(files){D={doc:'',chunks:[]};build();for(const f of [...files]){el('st').textContent='Reading '+f.name+'...';let pages;
 if(/\.pdf$/i.test(f.name)){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pages=[];
