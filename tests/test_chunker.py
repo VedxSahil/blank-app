@@ -78,3 +78,13 @@ def test_is_heading_negatives() -> None:
     assert not is_heading("2. Mr Rao resigned from the committee on 5 May.")
     assert is_heading("ITEM 7. MANAGEMENT DISCUSSION")
     assert is_heading("3.1 Capital commitments")
+
+
+def test_numbered_list_markers_do_not_leak_into_sentences() -> None:
+    # Found on a real PDF: "... expenses reimbursed. 11. Transactions ..." left a stray "11".
+    page = "Remuneration. USD 1,500 each; expenses reimbursed.\n11. Transactions are not voidable."
+    chunks = chunk_pages([Page(1, page)], doc="d")
+    assert (
+        chunks[0].text
+        == "Remuneration. USD 1,500 each; expenses reimbursed. Transactions are not voidable."
+    )

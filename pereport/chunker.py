@@ -17,6 +17,7 @@ _KEYWORD_HEADING = re.compile(
     r"^(?:item\s+\d+[a-z]?\.?|section\s+\d+|part\s+[ivx]+|schedule\s+\w+)\b", re.I
 )
 _NUMERIC_TOKEN = re.compile(r"\d[\d,]*(?:\.\d+)?%?")
+_LIST_MARKER = re.compile(r"^\d{1,2}\.\s+(?=\S)")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z\"'(\[])")
 
 
@@ -135,7 +136,8 @@ def _page_blocks(text: str, section: str) -> tuple[list[tuple[str, str, str]], s
             flush()
             section = line
         else:
-            buf.append(line)
+            # numbered-list markers ("11. Transactions...") would leak into the previous sentence
+            buf.append(_LIST_MARKER.sub("", line))
     flush()
     return blocks, section
 

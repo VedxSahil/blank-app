@@ -134,7 +134,7 @@ def test_run_in_heading_is_joined_to_its_sentence() -> None:
     assert merge_run_in_labels(
         ["Directors' remuneration.", "USD 1,500 per annum each.", "Next one."]
     ) == [
-        "Directors' remuneration. USD 1,500 per annum each.",
+        "Directors' remuneration: USD 1,500 per annum each.",
         "Next one.",
     ]
     # a real short sentence (has "is") and a fragment with a digit are not labels
@@ -148,5 +148,5 @@ def test_run_in_heading_is_joined_to_its_sentence() -> None:
     ]
     out = ExtractiveGenerator().generate("What is the directors' remuneration?", corpus)
     assert out.startswith(
-        "Directors' remuneration. USD 1,500 per annum each; two directors waived fees [fx, p.1]"
+        "Directors' remuneration: USD 1,500 per annum each; two directors waived fees [fx, p.1]"
     )

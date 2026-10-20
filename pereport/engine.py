@@ -92,7 +92,8 @@ def merge_run_in_labels(sentences: list[str]) -> list[str]:
             and i + 1 < len(sentences)
         )
         if is_label:
-            out.append(f"{sentences[i].rstrip('.:')}. {sentences[i + 1]}")
+            # a colon, not a full stop: the verifier splits on full stops and would orphan the label
+            out.append(f"{sentences[i].rstrip('.:')}: {sentences[i + 1]}")
             i += 2
         else:
             out.append(sentences[i])
