@@ -41,5 +41,5 @@ module = ["pymupdf.*", "fitz.*", "sentence_transformers.*", "openpyxl.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["pereport.ingest", "test_ingest"]
+module = ["pereport.ingest", "test_ingest", "test_api"]
 disallow_untyped_calls = false
