@@ -92,7 +92,8 @@ class HybridRetriever:
                 [order[h.chunk.chunk_id] for h in self._bm25.search(query, self.candidates)]
             )
         if self.embedder is not None:
-            q = self.embedder.embed([query])[0]
+            embed_q = getattr(self.embedder, "embed_query", self.embedder.embed)
+            q = embed_q([query])[0]
             sims = sorted(
                 ((cosine(q, v), i) for i, v in enumerate(self._vecs)), key=lambda t: (-t[0], t[1])
             )
