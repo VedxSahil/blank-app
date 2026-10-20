@@ -110,3 +110,19 @@ def test_year_in_question_must_appear_in_answer() -> None:
 
     forced = Engine(HybridRetriever(corpus), Gate(0.0), generator=Always())
     assert forced.ask("What were distributions in 2021?").reason == "key_term_missing"
+
+
+def test_table_row_whose_label_is_named_by_the_question_beats_a_longer_sentence() -> None:
+    # q terms {long, lock, up, period}. Row "Lock-up  One year from issue." has label terms {lock, up},
+    # both in q: overlap {lock, up} = 2, plus LABEL_BONUS 3 = 5. The definition sentence overlaps
+    # {lock, up, period} = 3. Without the bonus the sentence would win.
+    corpus = [
+        _c(1, "Shares are redeemable only after the Lock-up Period, at quarterly dealing days."),
+        _c(
+            2,
+            "Term  Summary\nLock-up  One year from issue.\nSettlement  Within 14 Business Days.",
+            "table",
+        ),
+    ]
+    out = ExtractiveGenerator().generate("How long is the lock-up period?", corpus)
+    assert out.startswith("Term  Summary / Lock-up  One year from issue [fx, p.2]")

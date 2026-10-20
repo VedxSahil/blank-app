@@ -29,6 +29,7 @@ GLOSSARY = {
     "aif": "alternative investment fund",
 }
 _ACRONYM = re.compile(r"\b[A-Z]{2,}[a-z]?\b")
+LABEL_BONUS = 3
 _HAS_DIGIT = re.compile(r"\d")
 REFUSAL_TEXT = "The provided documents do not contain enough information to answer this question."
 
@@ -78,6 +79,10 @@ class ExtractiveGenerator:
                 if header and pos > 0:
                     row_terms |= set(terms(header))  # a data row inherits its header's words
                 overlap = len(q & row_terms)
+                if chunk.kind == "table":
+                    label = set(terms(line.split("  ")[0]))
+                    if label and label <= q:
+                        overlap += LABEL_BONUS  # the row's own label is what the question names
                 if overlap >= need:
                     shown = f"{header} / {line}" if header and pos > 0 else line
                     scored.append((-overlap, rank, pos, shown.strip(), chunk))
