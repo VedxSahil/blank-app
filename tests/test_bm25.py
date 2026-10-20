@@ -58,11 +58,26 @@ def test_stopwords_do_not_create_hits() -> None:
     assert [h.chunk.chunk_id for h in idx.search("what is the fee")] == ["t:p1:c1"]
 
 
-def test_plural_stem_makes_fees_match_fee() -> None:
+def test_stem_hand_worked_cases() -> None:
     from pereport.bm25 import stem
 
-    assert [stem(w) for w in ("fees", "fee", "gross", "class", "2021s", "is")] == [
-        "fee", "fee", "gross", "class", "2021s", "is",
-    ]  # fmt: skip
-    idx = BM25Index([_chunk(0, "management fee schedule")])
-    assert idx.search("what are the fees")[0].chunk.chunk_id == "t:p1:c0"
+    cases = {
+        "fees": "fee",  # plural s removed; "fee" has 3 letters so the silent-e rule does not apply
+        "closing": "clos",  # "ing" removed, then silent e
+        "close": "clos",  # silent e removed: close and closing meet at "clos"
+        "meeting": "meet",  # "ing" removed
+        "meetings": "meeting",  # only the plural s is removed (a known limit: no double stripping)
+        "policies": "policy",
+        "gross": "gross", "class": "class",  # "ss" words untouched
+        "2021s": "2021s", "is": "is", "may": "may",  # non-alphabetic or too short
+    }  # fmt: skip
+    for word, expected in cases.items():
+        assert stem(word) == expected, word
+
+
+def test_stem_lets_question_wording_match_document_wording() -> None:
+    idx = BM25Index(
+        [_chunk(0, "closing at 5:00 PM on 30 May"), _chunk(1, "management fee schedule")]
+    )
+    assert idx.search("when does it close")[0].chunk.chunk_id == "t:p1:c0"
+    assert idx.search("what are the fees")[0].chunk.chunk_id == "t:p1:c1"

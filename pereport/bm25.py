@@ -33,10 +33,25 @@ STOPWORDS = frozenset({
 
 
 def stem(token: str) -> str:
-    """Strip a plural 's' (fees -> fee). Numbers and words ending in 'ss' are left alone."""
-    if len(token) > 3 and token.endswith("s") and not token.endswith("ss") and token.isalpha():
-        return token[:-1]
-    return token
+    """Light suffix stripping so fees/fee, closing/close and meeting/meet match.
+
+    Only alphabetic tokens longer than three letters are touched: ies -> y, then ing, ed or a
+    plural s (not ss), then a final silent e. Numbers and words ending in 'ss' are left alone.
+    """
+    if len(token) <= 3 or not token.isalpha():
+        return token
+    t = token
+    if t.endswith("ies") and len(t) > 4:
+        t = t[:-3] + "y"
+    elif t.endswith("ing") and len(t) > 5:
+        t = t[:-3]
+    elif t.endswith("ed") and len(t) > 4:
+        t = t[:-2]
+    elif t.endswith("s") and not t.endswith("ss"):
+        t = t[:-1]
+    if t.endswith("e") and len(t) > 3:
+        t = t[:-1]
+    return t
 
 
 def terms(text: str) -> list[str]:
