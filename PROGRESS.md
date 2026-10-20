@@ -33,14 +33,52 @@ Defects found by probing and fixed: entity runs fused across possessives; citati
 attached to the wrong sentence; a number supported by another number's context ("fee is 20%" vs "carry is 20%");
 spelled-out numbers unchecked; entity-only gold facts compared case-sensitively.
 
-## Blockers (open)
-Modules A1/A2/A7/A8/A9 skipped by user instruction (stubs removed). Network hosts B-N1 to B-N10 still HTTP 403 (rechecked in Loop 2).
+## Loop 2, 2026-10-20 (user: skip A1/A2/A7/A8/A9 and proceed)
+Modules dropped (stubs removed). Network rechecked: still HTTP 403 for every document and model host.
+Built one component per commit; `make check` (ruff, ruff format, mypy --strict, pytest) after each.
 
-## Not done (depends on blockers)
-Phase 1 data and manifest, dense and reranker retrieval, real chunking tests on PDFs, gold set, ablations,
-report drafter (needs real documents), FastAPI and Next.js app, Playwright demo, docker compose,
-viva script, ≥300 MB corpus. The hallucination exit criterion is unmet and, with 100 questions, cannot be shown
-at 2% (docs/assumptions.md).
+| Commit | Component | pytest after |
+|---|---|---|
+| stubs removed | docs updated | 44 |
+| ingest | PyMuPDF pages + table rows, chunk store, SHA-256 download manifest | 49 |
+| retrieval | BM25 + dense via RRF, optional reranker (fake models in tests) | 56 |
+| engine | gate + extractive generator + verifier + ablation switches | 64 |
+| report | ILPA-style drafter bound to chunk IDs | 71 |
+| evalrun | gold validation, freeze lock, dev-only calibration, report/CSV/charts | 76 |
+| models + CLIs | bge/cross-encoder wrappers, SQLite cache, build_index, run_eval | 79 |
+| api | FastAPI, 503 until gate calibrated | 83 |
+| web | Next.js app, Playwright e2e (11), axe light and dark, 375 px overflow check | 83 + 11 e2e |
+
+Final gates run in this environment: `make check` exit 0 (83 passed); `tsc`, `eslint`, `next build` exit 0;
+Playwright 11 passed.
+
+Defects found by tests and fixed this loop:
+- Report test: an IRR question answered with a NAV sentence (shared words "net", "fund"). Added mandatory
+  acronym/number rule, glossary expansion, plural stemming.
+- Table answers returned only the header row. Data rows now inherit header terms and show the header.
+- Next config rewrite dropped the Tailwind loader, so the CSS bundle was 1.3 KB and the UI was unstyled while
+  all behavioural tests still passed. Restored (17 KB) and checked with screenshots.
+- axe: nav links in dark mode used default link blue (contrast 2:1); chip accessible name lacked its visible
+  text. 375 px overflow from an absolutely positioned table caption.
+- Process slips: two commits were made with a failing check because of `;` and `| tail` hiding the exit
+  status. Both were fixed in the next commit; later commits gate on `make check` directly.
+
+## Exit criteria status
+| Criterion | Status |
+|---|---|
+| Zero test/lint/build errors | Met for what exists (above). Docker build not run. |
+| Hallucination ≤ 2% on frozen test set | **Not measured.** No gold set. Also needs ≥188 answered questions with zero errors to bound at 2%. |
+| Demo answers verified against source pages | **Not met.** No real documents. |
+| Refusal works on unsupported questions | Works on fixture tests; unproven on real documents. |
+| ≥300 MB of real data and indexes | **Not met.** `data/` holds only an empty `targets.json`. |
+| README with setup, architecture, viva script | README and docs/viva_script.md written; the viva table is blank by design. |
+| docker compose fresh-clone run | **Not met.** No Docker daemon (B-D1). |
+
+## Blockers (open)
+See BLOCKERS.md: network hosts B-N1 to B-N10 (HTTP 403), Docker B-D1, tooling B-T1 to B-T4. Modules A1/A2/A7/A8/A9
+were skipped by instruction.
 
 ## Next step
-When network access and modules arrive: `scripts/download.py` with SHA-256 manifest, PyMuPDF parsing, then gold set.
+Once the document and model hosts are allowed: choose real URLs in `data/targets.json`, run download and
+build_index, write the gold set by hand from the real pages (≥188 test-split answerable/partial questions if the
+2% claim is to be shown), freeze it, run `scripts/run_eval.py`, then fill `docs/viva_script.md`.

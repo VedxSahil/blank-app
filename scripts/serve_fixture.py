@@ -9,10 +9,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import uvicorn  # noqa: E402
+import uvicorn
 
-from pereport.api import create_app  # noqa: E402
-from pereport.chunker import Chunk  # noqa: E402
+from pereport.api import create_app
+from pereport.chunker import Chunk
 
 FIXTURE = [
     ("p1", 1, "FEES", "The management fee is 2% of committed capital."),
@@ -21,7 +21,16 @@ FIXTURE = [
     ("p3", 3, "AUDIT", "The auditor of the fund is Beta Audit LLP."),
 ]
 CHUNKS = [
-    Chunk(f"fixture:p{page}:c{i}", "fixture-doc", page, sec, "2024-01-01", "Fixture Fund", "text", text)
+    Chunk(
+        f"fixture:p{page}:c{i}",
+        "fixture-doc",
+        page,
+        sec,
+        "2024-01-01",
+        "Fixture Fund",
+        "text",
+        text,
+    )
     for i, (_, page, sec, text) in enumerate(FIXTURE)
 ]
 

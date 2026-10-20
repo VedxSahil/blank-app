@@ -26,9 +26,18 @@ and /mnt). Their stubs were removed. Nothing in this project depends on them:
 
 Reachable: pypi.org, registry.npmjs.org (code dependencies only).
 
+## Tooling blockers
+| ID | Item | Status |
+|---|---|---|
+| B-D1 | Docker daemon | Not running in this container, so `docker compose up` was never run. Dockerfiles and compose file are written but **untested**; the "fresh-clone run via docker compose" gate is unmet. |
+| B-T1 | shadcn/ui CLI | `ui.shadcn.com` blocked (request cancelled). Components were hand-written in the shadcn pattern (`web/components/ui`). |
+| B-T2 | 21st.dev Magic MCP | Not available in this session. Components built by hand. |
+| B-T3 | UI/UX Pro Max skill | Not available in this session. Design decisions made directly and checked with axe and screenshots. |
+| B-T4 | Google Fonts | Blocked; system font stack used instead of `next/font/google`. |
+
 ## Consequences (network)
 - `data/` and `models/` do not exist; `sources.csv` has no rows (no real pull has succeeded).
-- Gold set (≥100 hand-labelled questions with source pages) cannot be written without real documents.
+- Gold set (≥100 hand-labelled questions with source pages) cannot be written without real documents. Gold files must be written by a person reading the real pages; nothing here generates them.
 - Dense, hybrid and reranker ablations cannot run; only BM25 exists.
 - Exit criteria on corpus size (≥300 MB), hallucination rate on a frozen test set and demo page citations are **unmet**.
 - Aurelian Peak files, `pe_engine.py` and `eval/gold_aurelian.json` (branch `claude/stoic-edison-nxyb7y`) are deliberately unused.

@@ -48,3 +48,29 @@ documents have been processed yet (see BLOCKERS.md).
 ## Data
 - No documents, models or gold questions exist in the repo. Unit tests use short invented strings that
   are labelled as fixtures and must never appear in the UI, the eval set or any report.
+
+## Engine (`pereport/engine.py`)
+- The default generator is extractive: it copies whole sentences (or table rows, with their header row)
+  from the top chunks and appends `[doc, p.X]`. It cannot invent a fact, but it also cannot paraphrase,
+  combine two passages or do arithmetic. An LLM generator can be injected; the verifier then matters most.
+- Acronyms (NAV, IRR, TVPI, DPI, RVPI, MOIC, GP, LP, AIF) and any numbers or years in the question must appear
+  in the answer (an acronym may be satisfied by its spelled-out form, from `GLOSSARY`). This was added after a
+  fixture test showed an IRR question answered with a NAV sentence because both contain "net" and "fund".
+  Cost: a question using a synonym the documents do not use is refused.
+- Plural "s" is stripped from terms (fees = fee). No other stemming.
+- A table split across chunks loses its header row for the later chunks.
+
+## Retrieval (`pereport/retrieval.py`, `pereport/models.py`)
+- Dense and rerank paths are written against protocols and tested with fake embedders. They have **not**
+  been run with bge or the cross-encoder (weights unreachable). Gate thresholds are per mode and must be
+  calibrated on dev for each.
+- bge queries use the documented instruction prefix; passages do not.
+
+## Report drafter (`pereport/report.py`)
+- Each field is one generic LP question run through the engine. No numbers are computed (no TVPI/DPI
+  arithmetic yet); a multiple appears only if a document states it.
+
+## Web app and tests
+- Playwright and axe run against `scripts/serve_fixture.py`, an API over four invented sentences. They
+  prove behaviour (citations, refusal, reduced motion, contrast, no horizontal scroll at 375 px), not accuracy.
+- Streaming text is a client-side word-by-word reveal of the finished answer, not token streaming.

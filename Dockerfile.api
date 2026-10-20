@@ -1,0 +1,9 @@
+FROM python:3.13-slim
+WORKDIR /app
+COPY pyproject.toml README.md ./
+COPY pereport ./pereport
+COPY scripts ./scripts
+RUN pip install --no-cache-dir pymupdf fastapi uvicorn matplotlib
+# data/ (chunks, manifest) and eval/ (gate.json, metrics.json) are mounted at run time
+EXPOSE 8000
+CMD ["uvicorn", "pereport.api:app_from_disk", "--factory", "--host", "0.0.0.0", "--port", "8000"]
