@@ -5,6 +5,7 @@ scripts/run_eval.py); otherwise /api/ask and /api/report return 503 instead of g
 """
 
 import json
+import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -61,6 +62,7 @@ def create_app(
     threshold: float | None,
     manifest: list[dict[str, Any]] | None = None,
     eval_metrics: dict[str, Any] | None = None,
+    banner: str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="PEReport", version="0.1.0")
     engine = (
@@ -83,7 +85,12 @@ def create_app(
 
     @app.get("/api/health")
     def health() -> dict[str, Any]:
-        return {"ok": True, "chunks": len(chunks), "calibrated": threshold is not None}
+        return {
+            "ok": True,
+            "chunks": len(chunks),
+            "calibrated": threshold is not None,
+            "banner": banner,
+        }
 
     @app.post("/api/ask")
     def ask(req: AskRequest) -> dict[str, Any]:
@@ -126,13 +133,20 @@ def create_app(
 
 
 def app_from_disk() -> FastAPI:
-    files = sorted(Path("data/chunks").glob("*.jsonl"))
-    chunks = [c for f in files for c in load_chunks(f)]
-    mpath = Path("data/manifest.json")
-    epath = Path("eval/metrics.json")
+    """Serve chunks and eval output from disk.
+
+    PEREPORT_CHUNKS, PEREPORT_EVAL and PEREPORT_MANIFEST choose other locations (for example the
+    replica sample PPM); PEREPORT_BANNER shows a notice strip on every screen of the web app.
+    """
+    chunks_dir = Path(os.environ.get("PEREPORT_CHUNKS", "data/chunks"))
+    eval_dir = Path(os.environ.get("PEREPORT_EVAL", "eval"))
+    mpath = Path(os.environ.get("PEREPORT_MANIFEST", "data/manifest.json"))
+    chunks = [c for f in sorted(chunks_dir.glob("*.jsonl")) for c in load_chunks(f)]
+    epath = eval_dir / "metrics.json"
     return create_app(
         chunks,
-        load_threshold(Path("eval/gate.json")),
+        load_threshold(eval_dir / "gate.json"),
         json.loads(mpath.read_text()) if mpath.exists() else None,
         json.loads(epath.read_text()) if epath.exists() else None,
+        os.environ.get("PEREPORT_BANNER"),
     )

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Banner } from "@/components/banner";
 import { MotionRoot } from "@/components/motion-root";
 import { Nav } from "@/components/nav";
 
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
+        <Banner />
         <Nav />
         <MotionRoot>
           <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">

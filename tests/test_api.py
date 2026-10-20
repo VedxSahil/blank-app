@@ -29,7 +29,7 @@ def test_uncalibrated_or_empty_returns_503_not_a_guess() -> None:
     assert _client(threshold=None).post("/api/ask", json={"question": "fee"}).status_code == 503
     assert _client(chunks=[]).post("/api/ask", json={"question": "fee"}).status_code == 503
     assert _client(threshold=None).get("/api/health").json() == {
-        "ok": True, "chunks": 2, "calibrated": False,
+        "ok": True, "chunks": 2, "calibrated": False, "banner": None,
     }  # fmt: skip
 
 
@@ -51,3 +51,21 @@ def test_report_chunk_documents_eval() -> None:
     docs = c.get("/api/documents").json()["documents"]
     assert docs == [{"doc": "fx", "chunks": 2, "pages": 2, "date": "2024-01-01"}]
     assert c.get("/api/eval").json() == {"available": False}
+
+
+def test_banner_is_reported_and_app_from_disk_reads_env(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from pereport.api import app_from_disk
+    from pereport.store import save_chunks
+
+    assert (
+        TestClient(create_app(CHUNKS, 0.2, banner="SAMPLE")).get("/api/health").json()["banner"]
+        == "SAMPLE"
+    )
+    save_chunks(tmp_path / "chunks" / "d.jsonl", CHUNKS)
+    (tmp_path / "ev").mkdir()
+    (tmp_path / "ev" / "gate.json").write_text('{"bm25": 0.2}')
+    monkeypatch.setenv("PEREPORT_CHUNKS", str(tmp_path / "chunks"))
+    monkeypatch.setenv("PEREPORT_EVAL", str(tmp_path / "ev"))
+    monkeypatch.setenv("PEREPORT_BANNER", "FROM ENV")
+    health = TestClient(app_from_disk()).get("/api/health").json()
+    assert health == {"ok": True, "chunks": 2, "calibrated": True, "banner": "FROM ENV"}

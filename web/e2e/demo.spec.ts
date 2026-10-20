@@ -68,3 +68,11 @@ test("no horizontal scroll at phone width on any screen", async ({ browser }) =>
   }
   await ctx.close();
 });
+
+
+test("the notice banner from the API is shown on every screen", async ({ page }) => {
+  for (const path of ["/", "/report", "/eval", "/library"]) {
+    await page.goto(path);
+    await expect(page.getByTestId("banner")).toContainText("FIXTURE TEXT (invented)");
+  }
+});
