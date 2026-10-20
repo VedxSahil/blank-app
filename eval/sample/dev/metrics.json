@@ -1,12 +1,12 @@
 {
   "bm25": {
     "n": 25,
-    "answer_accuracy": 0.6,
-    "auto_answer_rate": 0.56,
-    "auto_answer_rate_answerable": 0.8235294117647058,
-    "citation_precision": 0.7407407407407407,
-    "citation_recall": 0.5555555555555556,
-    "faithfulness": 0.9583333333333334,
+    "answer_accuracy": 0.64,
+    "auto_answer_rate": 0.6,
+    "auto_answer_rate_answerable": 0.8823529411764706,
+    "citation_precision": 0.7586206896551724,
+    "citation_recall": 0.6111111111111112,
+    "faithfulness": 1.0,
     "refusal_precision": 1.0,
     "refusal_recall": 0.125,
     "answered": 24,
@@ -18,7 +18,7 @@
         "n": 15,
         "answered": 15,
         "refused": 0,
-        "correct": 13
+        "correct": 14
       },
       "partial": {
         "n": 2,
@@ -36,24 +36,24 @@
   },
   "bm25+gate+verifier": {
     "n": 25,
-    "answer_accuracy": 0.6,
-    "auto_answer_rate": 0.28,
-    "auto_answer_rate_answerable": 0.4117647058823529,
-    "citation_precision": 0.7142857142857143,
-    "citation_recall": 0.43478260869565216,
-    "faithfulness": 0.9,
-    "refusal_precision": 0.5333333333333333,
-    "refusal_recall": 1.0,
-    "answered": 10,
-    "hallucinations": 0,
-    "hallucination_rate": 0.0,
-    "hallucination_upper_95": 0.2775401687666166,
+    "answer_accuracy": 0.72,
+    "auto_answer_rate": 0.44,
+    "auto_answer_rate_answerable": 0.6470588235294118,
+    "citation_precision": 0.7272727272727273,
+    "citation_recall": 0.5714285714285714,
+    "faithfulness": 1.0,
+    "refusal_precision": 0.6363636363636364,
+    "refusal_recall": 0.875,
+    "answered": 14,
+    "hallucinations": 1,
+    "hallucination_rate": 0.07142857142857142,
+    "hallucination_upper_95": 0.3146926955395781,
     "by_category": {
       "answerable": {
         "n": 15,
-        "answered": 9,
-        "refused": 6,
-        "correct": 7
+        "answered": 12,
+        "refused": 3,
+        "correct": 11
       },
       "partial": {
         "n": 2,
@@ -63,9 +63,9 @@
       },
       "unanswerable": {
         "n": 8,
-        "answered": 0,
-        "refused": 8,
-        "correct": 8
+        "answered": 1,
+        "refused": 7,
+        "correct": 7
       }
     }
   }

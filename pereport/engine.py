@@ -59,6 +59,47 @@ class Generator(Protocol):
         ...
 
 
+_LABEL_BLOCKERS = {
+    "is",
+    "are",
+    "was",
+    "were",
+    "has",
+    "have",
+    "had",
+    "will",
+    "may",
+    "the",
+    "a",
+    "an",
+}
+
+
+def merge_run_in_labels(sentences: list[str]) -> list[str]:
+    """Join a run-in heading ("Directors' remuneration.") with the sentence it introduces.
+
+    A fragment counts as a label when it is at most five words, has no digit and contains no
+    verb-like or article word, so it cannot stand as an answer by itself.
+    """
+    out: list[str] = []
+    i = 0
+    while i < len(sentences):
+        words = sentences[i].rstrip(".:").split()
+        is_label = (
+            0 < len(words) <= 5
+            and not any(c.isdigit() for c in sentences[i])
+            and not {w.lower() for w in words} & _LABEL_BLOCKERS
+            and i + 1 < len(sentences)
+        )
+        if is_label:
+            out.append(f"{sentences[i].rstrip('.:')}. {sentences[i + 1]}")
+            i += 2
+        else:
+            out.append(sentences[i])
+            i += 1
+    return out
+
+
 class ExtractiveGenerator:
     def __init__(self, max_sentences: int = 2) -> None:
         self.max_sentences = max_sentences
@@ -70,7 +111,11 @@ class ExtractiveGenerator:
         need = min(2, len(q))
         scored: list[tuple[int, int, int, str, Chunk]] = []
         for rank, chunk in enumerate(chunks):
-            lines = chunk.text.split("\n") if chunk.kind == "table" else split_sentences(chunk.text)
+            lines = (
+                chunk.text.split("\n")
+                if chunk.kind == "table"
+                else merge_run_in_labels(split_sentences(chunk.text))
+            )
             header = lines[0] if chunk.kind == "table" and not _HAS_DIGIT.search(lines[0]) else ""
             for pos, line in enumerate(lines):
                 if header and pos == 0:

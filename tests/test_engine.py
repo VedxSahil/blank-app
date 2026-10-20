@@ -126,3 +126,27 @@ def test_table_row_whose_label_is_named_by_the_question_beats_a_longer_sentence(
     ]
     out = ExtractiveGenerator().generate("How long is the lock-up period?", corpus)
     assert out.startswith("Term  Summary / Lock-up  One year from issue [fx, p.2]")
+
+
+def test_run_in_heading_is_joined_to_its_sentence() -> None:
+    from pereport.engine import merge_run_in_labels
+
+    assert merge_run_in_labels(
+        ["Directors' remuneration.", "USD 1,500 per annum each.", "Next one."]
+    ) == [
+        "Directors' remuneration. USD 1,500 per annum each.",
+        "Next one.",
+    ]
+    # a real short sentence (has "is") and a fragment with a digit are not labels
+    assert merge_run_in_labels(["The auditor is Beta.", "Other."]) == [
+        "The auditor is Beta.",
+        "Other.",
+    ]
+    assert merge_run_in_labels(["Fee 2%.", "Other."]) == ["Fee 2%.", "Other."]
+    corpus = [
+        _c(1, "Directors' remuneration. USD 1,500 per annum each; two directors waived fees.")
+    ]
+    out = ExtractiveGenerator().generate("What is the directors' remuneration?", corpus)
+    assert out.startswith(
+        "Directors' remuneration. USD 1,500 per annum each; two directors waived fees [fx, p.1]"
+    )
