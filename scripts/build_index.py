@@ -1,6 +1,7 @@
 """Parse every PDF in data/raw into section-aware chunks (data/chunks/<doc>.jsonl).
 
-Usage: python scripts/build_index.py [meta.json]
+Usage: python scripts/build_index.py [meta.json] [--src DIR] [--out DIR]
+(defaults: --src data/raw, --out data/chunks)
 meta.json (optional) maps a PDF file name to {"date": ..., "fund": ...}. Pages that look scanned
 are reported; OCR is not run automatically.
 """
@@ -17,17 +18,22 @@ from pereport.store import save_chunks
 
 
 def main(argv: list[str]) -> int:
-    meta = json.loads(Path(argv[1]).read_text()) if len(argv) > 1 else {}
-    pdfs = sorted(Path("data/raw").glob("*.pdf"))
+    opts = {a: argv[i + 1] for i, a in enumerate(argv) if a in ("--src", "--out")}
+    pos = [
+        a for i, a in enumerate(argv[1:], 1) if not a.startswith("--") and argv[i - 1] not in opts
+    ]
+    meta = json.loads(Path(pos[0]).read_text()) if pos else {}
+    src, out = Path(opts.get("--src", "data/raw")), Path(opts.get("--out", "data/chunks"))
+    pdfs = sorted(src.glob("*.pdf"))
     if not pdfs:
-        print("no PDFs in data/raw (see BLOCKERS.md: nothing has been downloaded)")
+        print(f"no PDFs in {src} (see BLOCKERS.md: nothing has been downloaded)")
         return 1
     total = 0
     for pdf in pdfs:
         parsed = parse_pdf(pdf)
         m = meta.get(pdf.name, {})
         chunks = chunk_pages(parsed.pages, pdf.stem, m.get("date"), m.get("fund"))
-        save_chunks(Path("data/chunks") / f"{pdf.stem}.jsonl", chunks)
+        save_chunks(out / f"{pdf.stem}.jsonl", chunks)
         total += len(chunks)
         note = f", NEEDS OCR on pages {parsed.ocr_pages}" if parsed.ocr_pages else ""
         print(f"{pdf.name}: {len(parsed.pages)} pages, {len(chunks)} chunks{note}")

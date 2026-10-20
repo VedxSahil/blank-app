@@ -148,3 +148,17 @@ def test_spelled_out_numbers_are_checked() -> None:
     res = verify_answer("Carry is twenty percent [doc, p.1].", [_chunk("doc", 1, RATES)])
     assert res.refused
     assert [r for s in res.stripped for r in s.reasons] == ["unsupported_number: twenty"]
+
+
+def test_number_inside_an_entity_does_not_corrupt_the_entity() -> None:
+    # Found on a real PDF: masking "1" turned "Category 1 Global Business Licence" into
+    # "Category Global Business Licence", which the evidence does not contain.
+    text = "The Fund holds a Category 1 Global Business Licence."
+    assert unsupported_facts(text, text) == []
+    keys = {f.key for f in extract_facts(text) if f.kind == "entity"}
+    assert keys == {"fund", "category", "global business licence"}
+
+
+def test_date_between_capitalised_words_splits_the_run() -> None:
+    text = "Alpha 31 March 2024 Beta"
+    assert {f.key for f in extract_facts(text) if f.kind == "entity"} == {"alpha", "beta"}

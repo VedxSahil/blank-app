@@ -43,6 +43,9 @@ _NUMBER = re.compile(
     r"(?:\s?(%|(?:x|bn|billion|mn|million|crore|cr|lakh|k)\b))?(?!st\b|nd\b|rd\b|th\b)",
     re.I,
 )
+# Dates and numbers are blanked with this non-space character, so an entity run cannot silently
+# close over them ("Category 1 Global Business Licence" must not become "Category Global ...").
+_MASK = "\u00a7"
 _UNIT_CANON = {
     "%": "pct", "x": "x", "bn": "bn", "billion": "bn", "mn": "mn", "million": "mn",
     "crore": "cr", "cr": "cr", "lakh": "lakh", "k": "k",
@@ -139,7 +142,7 @@ def _extract_dates(text: str) -> tuple[list[Fact], str]:
     def sub(pattern: re.Pattern[str], make: Callable[[re.Match[str]], str], s: str) -> str:
         def repl(m: re.Match[str]) -> str:
             facts.append(Fact("date", make(m), m.group(0)))
-            return " " * len(m.group(0))
+            return _MASK * len(m.group(0))
 
         return pattern.sub(repl, s)
 
@@ -177,7 +180,7 @@ def _extract_numbers(text: str, window: int) -> tuple[list[Fact], str]:
             facts.append(
                 Fact("number", f"{sign}{_fmt(d)}{unit}", m.group(0).strip(), near(m.start()))
             )
-        return " " * len(m.group(0))
+        return _MASK * len(m.group(0))
 
     rest = _NUMBER.sub(repl, text)
     for pos, w in words:
