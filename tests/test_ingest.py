@@ -155,8 +155,8 @@ def test_parse_xlsx_headings_line_items_numbers_and_defs(tmp_path: Path) -> None
         "Column groups  LP share / Total fund",
     ]
     assert "# A.1 Reconciliation > Fees" in t  # bold row without values: sub-heading
-    assert "Management Fees  A.1 Reconciliation > Fees" in t
-    assert "Total Fees  A.1 Reconciliation > Fees (calculated row)" in t
+    assert "Management Fees  (template line item in A.1 Reconciliation > Fees)" in t
+    assert "Total Fees  (template line item in A.1 Reconciliation > Fees, calculated row)" in t
     assert any(ln.startswith("Footnote: an amount") for ln in t)  # long sentence stays a paragraph
     joined = pages[0].text
     for bad in ("123456", "987654", "111111", "2022", "(=)"):
@@ -207,3 +207,19 @@ def test_ilpa_template_real_file_regression() -> None:
     import re
 
     assert not re.search(r"\d{5,}", "\n".join(p.text for p in pages))  # no example figures indexed
+
+
+def test_label_only_rows_never_read_like_a_value(tmp_path: Path) -> None:
+    import openpyxl
+
+    from pereport.ingest import parse_xlsx
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Fund of Funds"
+    ws["C6"] = "Parent Fund Size:"  # an empty field in a blank template
+    path = tmp_path / "blank.xlsx"
+    wb.save(path)
+    text = parse_xlsx(path).pages[0].text
+    assert "Parent Fund Size:  (template line item in Fund of Funds)" in text
+    assert "Parent Fund Size:  Fund of Funds\n" not in text + "\n"

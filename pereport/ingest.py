@@ -236,7 +236,12 @@ def _sheet_lines(ws: Any, include_numbers: bool) -> list[str]:
             if need_header:
                 lines.append(STRUCTURE_HEADER)
                 need_header = False
-            lines.append(f"{t}  {context()}" + (f" {CALCULATED}" if calculated else ""))
+            # The second cell says what the row is. A bare section name there would read like the
+            # field's value ("Parent Fund Size:  Fund of Funds-Underlying"), which is never stated.
+            note = f"(template line item in {context()}" + (
+                ", calculated row)" if calculated else ")"
+            )
+            lines.append(f"{t}  {note}")
         if include_numbers and has_value:
             lines[-1] += "  " + " ".join(str(v) for _, v in row if _is_value(v))
     return lines
