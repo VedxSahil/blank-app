@@ -97,8 +97,13 @@ def test_year_in_question_must_appear_in_answer() -> None:
     corpus = [_c(2, "Distributions were 40 million in 2022.")]
     eng = Engine(HybridRetriever(corpus), Gate(0.5))
     assert eng.ask("What were distributions in 2022?").reason == "answered"
-    # 2021 is absent: refused (here by the low-score gate; the mandatory-term rule backs it up
-    # when other words push the score over the threshold).
+    # 2021 is absent from the corpus. The extractive generator already declines (too little overlap);
+    # a generator that always answers shows the mandatory-term rule catching it independently.
     assert eng.ask("What were distributions in 2021?").refused
-    low = Engine(HybridRetriever(corpus), Gate(0.0)).ask("What were distributions in 2021?")
-    assert low.reason == "key_term_missing"
+
+    class Always:
+        def generate(self, question: str, chunks: list[Chunk]) -> str:
+            return "Distributions were 40 million in 2022 [fx, p.2]."
+
+    forced = Engine(HybridRetriever(corpus), Gate(0.0), generator=Always())
+    assert forced.ask("What were distributions in 2021?").reason == "key_term_missing"
