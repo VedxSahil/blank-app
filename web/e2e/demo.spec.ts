@@ -76,3 +76,25 @@ test("the notice banner from the API is shown on every screen", async ({ page })
     await expect(page.getByTestId("banner")).toContainText("FIXTURE TEXT (invented)");
   }
 });
+
+test("upload a PDF, then ask a question scoped to it", async ({ page }) => {
+  await page.goto("/library");
+  await page.getByLabel("Document file").setInputFiles("e2e/fixtures/fee-memo.pdf");
+  await page.getByRole("button", { name: "Upload" }).click();
+  const added = page.getByTestId("upload-result");
+  await expect(added).toContainText("Added fee-memo");
+  await expect(added).toContainText("calibrated on other documents");
+  await expect(page.getByRole("rowheader", { name: /fee-memo/ })).toBeVisible();
+
+  await page.goto("/");
+  await page.getByLabel("Search in").selectOption("fee-memo");
+  await page.getByLabel("Your question").fill("What is the performance fee?");
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  const answer = page.getByTestId("answer");
+  await expect(answer).toContainText("15 percent of profits");
+  await expect(answer.getByRole("button", { name: "Open source: fee-memo, p.1" })).toBeVisible();
+  // the same question scoped to the original fixture document finds nothing
+  await page.getByLabel("Search in").selectOption("fixture-doc");
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  await expect(page.getByTestId("refusal")).toBeVisible();
+});

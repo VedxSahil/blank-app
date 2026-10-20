@@ -111,3 +111,11 @@ documents have been processed yet (see BLOCKERS.md).
   in a blank layout). A retrieval model or entailment check is needed to reject them.
 - Letter-numbered lines such as "A.1 Heading" are treated as headings in PDFs too; a name like "R. K. Ashworth" on
   its own line could be mistaken for one.
+
+## Uploaded documents (`/api/upload`)
+- Accepts .pdf and .xlsx, up to 25 MB, as base64 JSON. Parsed with the same code as the evaluated documents and kept in
+  memory only; it disappears when the server restarts. Other types, corrupt files and PDFs without a text layer are
+  rejected with a message.
+- The gate threshold is the one calibrated on the ILPA dev split (or the replica PPM's). It was not calibrated on an
+  uploaded file, so wrong refusals and, less often, wrong answers are expected; the app says so after each upload.
+- No evaluation exists for uploaded documents. Nothing measured here describes their accuracy.

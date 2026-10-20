@@ -34,6 +34,12 @@ web/                    Next.js app: Ask, Refusal, Report Builder, Evaluation, D
 scripts/                download.py, build_index.py, run_eval.py, serve_fixture.py (tests only)
 ```
 
+## Try your own document
+Run `scripts/run_demo.sh`, open the **Documents** screen, upload a PDF or `.xlsx` (up to 25 MB), then pick it under
+"Search in" on the **Ask** screen. Uploads are held in memory by the app on your computer. Scanned PDFs without text
+are rejected (no OCR). The refusal threshold was calibrated on the ILPA and replica documents, not on yours, so check
+every answer against its cited page; spreadsheets index text cells only (numbers and dates are dropped).
+
 ## Run
 ```
 uv venv --python 3.13 .venv && uv pip install --python .venv/bin/python -e '.[dev]'

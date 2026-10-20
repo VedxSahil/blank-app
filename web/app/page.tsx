@@ -2,14 +2,15 @@
 
 import { motion } from "framer-motion";
 import { AlertTriangle, Search, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { CitationText } from "@/components/citation-text";
 import { SourcePanel } from "@/components/source-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, type AskResult, type Source } from "@/lib/api";
+import { api, type AskResult, type DocInfo, type Source } from "@/lib/api";
 import { useReveal } from "@/lib/use-reveal";
 
 const REASONS: Record<string, string> = {
@@ -34,6 +35,11 @@ export default function AskPage() {
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<Source | null>(null);
   const [highlight, setHighlight] = useState<string>("");
+  const [docs, setDocs] = useState<DocInfo[]>([]);
+  const [scope, setScope] = useState<string>("");
+  useEffect(() => {
+    api.documents().then((d) => setDocs(d.documents)).catch(() => setDocs([]));
+  }, []);
 
   async function submit(q: string) {
     if (!q.trim() || loading) return;
@@ -42,7 +48,7 @@ export default function AskPage() {
     setResult(null);
     setSource(null);
     try {
-      setResult(await api.ask(q));
+      setResult(await api.ask(q, scope));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Request failed");
     } finally {
@@ -61,6 +67,28 @@ export default function AskPage() {
             Every sentence cites its source page. If the documents do not support an answer, the
             system refuses instead of guessing.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <label htmlFor="scope" className="font-medium">
+            Search in
+          </label>
+          <select
+            id="scope"
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
+            className="min-h-11 rounded-lg border border-border bg-card px-3 text-sm"
+          >
+            <option value="">All documents</option>
+            {docs.map((d) => (
+              <option key={d.doc} value={d.doc}>
+                {d.doc}
+                {d.uploaded ? " (uploaded)" : ""}
+              </option>
+            ))}
+          </select>
+          <Link href="/library" className="text-accent underline">
+            Upload your own document
+          </Link>
         </div>
         <form
           onSubmit={(e) => {
