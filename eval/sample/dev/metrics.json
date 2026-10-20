@@ -1,24 +1,24 @@
 {
   "bm25": {
     "n": 25,
-    "answer_accuracy": 0.56,
-    "auto_answer_rate": 0.52,
-    "auto_answer_rate_answerable": 0.7647058823529411,
-    "citation_precision": 0.6296296296296297,
-    "citation_recall": 0.4722222222222222,
-    "faithfulness": 0.875,
+    "answer_accuracy": 0.6,
+    "auto_answer_rate": 0.56,
+    "auto_answer_rate_answerable": 0.8235294117647058,
+    "citation_precision": 0.7407407407407407,
+    "citation_recall": 0.5555555555555556,
+    "faithfulness": 0.9583333333333334,
     "refusal_precision": 1.0,
     "refusal_recall": 0.125,
     "answered": 24,
-    "hallucinations": 8,
-    "hallucination_rate": 0.3333333333333333,
-    "hallucination_upper_95": 0.5329404050591954,
+    "hallucinations": 7,
+    "hallucination_rate": 0.2916666666666667,
+    "hallucination_upper_95": 0.49168063658709704,
     "by_category": {
       "answerable": {
         "n": 15,
         "answered": 15,
         "refused": 0,
-        "correct": 12
+        "correct": 13
       },
       "partial": {
         "n": 2,
@@ -36,36 +36,36 @@
   },
   "bm25+gate+verifier": {
     "n": 25,
-    "answer_accuracy": 0.52,
+    "answer_accuracy": 0.6,
     "auto_answer_rate": 0.28,
     "auto_answer_rate_answerable": 0.4117647058823529,
-    "citation_precision": 0.5263157894736842,
-    "citation_recall": 0.5,
-    "faithfulness": 0.9230769230769231,
-    "refusal_precision": 0.5,
-    "refusal_recall": 0.75,
-    "answered": 13,
-    "hallucinations": 2,
-    "hallucination_rate": 0.15384615384615385,
-    "hallucination_upper_95": 0.4223517050863101,
+    "citation_precision": 0.7142857142857143,
+    "citation_recall": 0.43478260869565216,
+    "faithfulness": 0.9,
+    "refusal_precision": 0.5333333333333333,
+    "refusal_recall": 1.0,
+    "answered": 10,
+    "hallucinations": 0,
+    "hallucination_rate": 0.0,
+    "hallucination_upper_95": 0.2775401687666166,
     "by_category": {
       "answerable": {
         "n": 15,
         "answered": 9,
         "refused": 6,
-        "correct": 6
+        "correct": 7
       },
       "partial": {
         "n": 2,
-        "answered": 2,
-        "refused": 0,
-        "correct": 1
+        "answered": 1,
+        "refused": 1,
+        "correct": 0
       },
       "unanswerable": {
         "n": 8,
-        "answered": 2,
-        "refused": 6,
-        "correct": 6
+        "answered": 0,
+        "refused": 8,
+        "correct": 8
       }
     }
   }

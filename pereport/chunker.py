@@ -61,12 +61,15 @@ def is_heading(line: str) -> bool:
 
 
 def _is_table(lines: list[str]) -> bool:
-    """A table: half the lines (min 2) hold two numbers, or 80% have double-space cell gaps."""
+    """A table: at least two lines and 80% of them have the double-space cell gaps ingest writes.
+
+    Numbers alone do not make a table; prose lines with figures (definitions, fee clauses) must stay
+    prose. Plain text that was not produced by ingest therefore needs double-space cells to be
+    recognised as a table.
+    """
     if len(lines) < 2:
         return False
-    numeric = sum(1 for ln in lines if len(_NUMERIC_TOKEN.findall(ln)) >= 2)
-    columns = sum(1 for ln in lines if "  " in ln)  # ingest joins table cells with two spaces
-    return numeric * 2 >= len(lines) or columns * 5 >= len(lines) * 4
+    return sum(1 for ln in lines if "  " in ln) * 5 >= len(lines) * 4
 
 
 def _split_words(text: str, max_words: int) -> list[str]:
@@ -97,20 +100,19 @@ def _pack_sentences(text: str, max_words: int) -> list[str]:
     return out
 
 
-def _pack_table_lines(lines: list[str], max_words: int) -> list[str]:
-    """Split a table on row boundaries only, so a row is never cut in half."""
+def _table_row_chunks(lines: list[str], max_words: int) -> list[str]:
+    """One chunk per table row, each carrying the header row (a first line without digits).
+
+    A row is the natural unit a reader asks about ("Management Fee  2% per annum..."), and one row
+    scores far better in retrieval than a whole term sheet diluted into a single chunk.
+    """
+    header = lines[0] if len(lines) > 1 and not any(c.isdigit() for c in lines[0]) else ""
+    rows = lines[1:] if header else lines
     out: list[str] = []
-    cur: list[str] = []
-    cur_n = 0
-    for ln in lines:
-        n = len(ln.split())
-        if cur and cur_n + n > max_words:
-            out.append("\n".join(cur))
-            cur, cur_n = [], 0
-        cur.append(ln)
-        cur_n += n
-    if cur:
-        out.append("\n".join(cur))
+    for row in rows:
+        pieces = [row] if len(row.split()) <= max_words else _split_words(row, max_words)
+        for piece in pieces:  # an over-long row is split by words; short rows keep their cell gaps
+            out.append(f"{header}\n{piece}" if header else piece)
     return out
 
 
@@ -168,7 +170,7 @@ def chunk_pages(
         idx = 0
         for sec, kind, text in merged:
             if kind == "table":
-                pieces = _pack_table_lines(text.split("\n"), max_words)
+                pieces = _table_row_chunks(text.split("\n"), max_words)
             else:
                 pieces = _pack_sentences(text.replace("\n", " "), max_words)
             for piece in pieces:

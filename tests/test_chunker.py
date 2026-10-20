@@ -45,13 +45,26 @@ def test_oversize_sentence_is_hard_split() -> None:
     assert [len(c.text.split()) for c in chunks] == [4, 4, 2]
 
 
-def test_table_block_is_kept_separate_and_split_on_rows() -> None:
-    page = "Intro sentence.\n\nRow a 10 20\nRow b 30 40\nRow c 50 60"
-    chunks = chunk_pages([Page(1, page)], doc="d", max_words=8)
+def test_table_rows_become_one_chunk_each_with_the_header() -> None:
+    page = "Intro sentence.\n\nYear  Called  Paid\nRow a  10  20\nRow b  30  40"
+    chunks = chunk_pages([Page(1, page)], doc="d")
+    # hand-worked: 1 prose chunk + 2 table rows (the header line is not a chunk of its own)
     assert [c.kind for c in chunks] == ["text", "table", "table"]
-    # Each row has 4 words; two rows = 8 <= 8 fits, third row starts a new chunk.
-    assert chunks[1].text == "Row a 10 20\nRow b 30 40"
-    assert chunks[2].text == "Row c 50 60"
+    assert chunks[1].text == "Year  Called  Paid\nRow a  10  20"
+    assert chunks[2].text == "Year  Called  Paid\nRow b  30  40"
+    assert [c.chunk_id for c in chunks] == ["d:p1:c0", "d:p1:c1", "d:p1:c2"]
+
+
+def test_prose_lines_with_numbers_are_not_a_table() -> None:
+    # Found on a real PDF: wrapped definitions with figures were being split line by line.
+    page = "A fee of 2.0% up to USD 499,999; 1.5% up to USD\n999,999; and 1.0% above USD 1,000,000."
+    chunks = chunk_pages([Page(1, page)], doc="d")
+    assert [c.kind for c in chunks] == ["text"] and len(chunks) == 1
+
+
+def test_table_without_a_header_row_keeps_rows_alone() -> None:
+    chunks = chunk_pages([Page(1, "2021  100  40\n2022  200  50")], doc="d")
+    assert [c.text for c in chunks] == ["2021  100  40", "2022  200  50"]
 
 
 def test_no_chunk_spans_pages() -> None:
