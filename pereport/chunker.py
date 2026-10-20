@@ -11,6 +11,9 @@ from dataclasses import dataclass
 
 DEFAULT_MAX_WORDS = 120
 FRONT_MATTER = "Front matter"
+# Header of the layout-only tables ingest writes for spreadsheet line items (a label plus the
+# section it sits in). They answer "what does the template list" but carry no definitions.
+STRUCTURE_HEADER = "Line item  Section"
 
 _NUMBERED_HEADING = re.compile(r"^(?:\d+(?:\.\d+)+|\d+\.|[IVX]+\.|[A-Z]\.\d*)\s+\S")
 _KEYWORD_HEADING = re.compile(

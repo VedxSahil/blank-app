@@ -28,7 +28,8 @@ STOPWORDS = frozenset({
     "a", "an", "the", "of", "and", "or", "to", "in", "on", "at", "by", "for", "with", "from",
     "as", "is", "are", "was", "were", "be", "been", "it", "its", "this", "that", "these", "those",
     "what", "which", "who", "whom", "how", "when", "where", "why", "do", "does", "did", "has",
-    "have", "had", "not", "no", "many", "much", "often", "take",
+    "have", "had", "not", "no", "many", "much", "often", "take", "define", "defined", "definition",
+    "mean", "means", "meaning", "explain",
 })  # fmt: skip
 
 

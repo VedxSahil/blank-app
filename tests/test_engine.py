@@ -150,3 +150,51 @@ def test_run_in_heading_is_joined_to_its_sentence() -> None:
     assert out.startswith(
         "Directors' remuneration: USD 1,500 per annum each; two directors waived fees [fx, p.1]"
     )
+
+
+def test_multi_sentence_table_row_is_cited_per_sentence_and_verifies() -> None:
+    # Found on the real ILPA template: a definition row holds several sentences on one line. Citing
+    # the whole row once made the verifier split it at the inner full stop and strip the tail.
+    from pereport.verifier import verify_answer
+
+    row = "Fee Waivers  Any waiver of fees. Specific fee waivers (i.e., MPI elections) belong here."
+    corpus = [_c(4, "Field  Definition\n" + row, "table")]
+    out = ExtractiveGenerator().generate("What are fee waivers?", corpus)
+    # q terms {fee, waiver}. Unit 0 (label bonus) and unit 1 each overlap both terms, so both are
+    # emitted, each with its own citation.
+    assert out == (
+        "Fee Waivers  Any waiver of fees [fx, p.4]. "
+        "Specific fee waivers (i.e., MPI elections) belong here [fx, p.4]."
+    )
+    assert verify_answer(out, corpus).passed
+    # a continuation sentence that shares no terms with the question is left out
+    only = ExtractiveGenerator().generate(
+        "What are Placement Fees?",
+        [
+            _c(
+                4,
+                "Field  Definition\nPlacement Fees  Fees paid for fundraising services. These might not be recorded.",
+                "table",
+            )
+        ],
+    )
+    assert only == "Placement Fees  Fees paid for fundraising services [fx, p.4]."
+
+
+def test_layout_only_rows_lose_ties_to_definition_rows() -> None:
+    # Both rows have label "Placement Fees" (overlap 1 + LABEL_BONUS 3). The layout row carries only
+    # its section name; the definition row wins by STRUCTURE_PENALTY.
+    layout = _c(2, "Line item  Section\nPlacement Fees  A.1 NAV Reconciliation", "table")
+    defn = _c(4, "Field  Definition\nPlacement Fees  Fees paid for fundraising services.", "table")
+    out = ExtractiveGenerator().generate("What are Placement Fees?", [layout, defn])
+    assert out.startswith("Placement Fees  Fees paid for fundraising services [fx, p.4]")
+
+
+def test_question_frame_words_do_not_count() -> None:
+    from pereport.bm25 import terms
+
+    assert terms("How does the template define Placement Fees, and what does it mean?") == [
+        "templat",  # silent e stripped, as in the index
+        "placement",
+        "fee",
+    ]

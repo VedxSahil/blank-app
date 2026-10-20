@@ -15,7 +15,7 @@ from typing import Any
 import openpyxl
 import pymupdf
 
-from pereport.chunker import Page
+from pereport.chunker import STRUCTURE_HEADER, Page
 
 MIN_TEXT_CHARS = 20
 
@@ -220,7 +220,7 @@ def _sheet_lines(ws: Any, include_numbers: bool) -> list[str]:
             lines += ["", f"# {top}"]
             need_header = len(texts) == 1  # header is written lazily, only if line items follow
             if len(texts) > 1:
-                lines += ["Line item  Section", "Column groups  " + " / ".join(texts[1:])]
+                lines += [STRUCTURE_HEADER, "Column groups  " + " / ".join(texts[1:])]
             continue
         if len(texts) >= 2:
             lines.append("  ".join(texts))
@@ -234,7 +234,7 @@ def _sheet_lines(ws: Any, include_numbers: bool) -> list[str]:
             lines += ["", f"# {context()}"]
         else:
             if need_header:
-                lines.append("Line item  Section")
+                lines.append(STRUCTURE_HEADER)
                 need_header = False
             lines.append(f"{t}  {context()}" + (f" {CALCULATED}" if calculated else ""))
         if include_numbers and has_value:

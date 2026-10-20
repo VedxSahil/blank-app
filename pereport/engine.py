@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from pereport.bm25 import terms
-from pereport.chunker import Chunk
+from pereport.chunker import STRUCTURE_HEADER, Chunk
 from pereport.gate import Gate
 from pereport.retrieval import HybridRetriever
 from pereport.verifier import CITATION, VerifiedAnswer, split_sentences, verify_answer
@@ -30,6 +30,7 @@ GLOSSARY = {
 }
 _ACRONYM = re.compile(r"\b[A-Z]{2,}[a-z]?\b")
 LABEL_BONUS = 3
+STRUCTURE_PENALTY = 1  # layout-only rows lose ties to rows that carry a definition
 _HAS_DIGIT = re.compile(r"\d")
 REFUSAL_TEXT = "The provided documents do not contain enough information to answer this question."
 
@@ -110,7 +111,8 @@ class ExtractiveGenerator:
         if not q:
             return ""
         need = min(2, len(q))
-        scored: list[tuple[int, int, int, str, Chunk]] = []
+        # (negative rank score, retrieval rank, line position, unit position, text, chunk)
+        scored: list[tuple[int, int, int, int, str, Chunk]] = []
         for rank, chunk in enumerate(chunks):
             lines = (
                 chunk.text.split("\n")
@@ -118,27 +120,34 @@ class ExtractiveGenerator:
                 else merge_run_in_labels(split_sentences(chunk.text))
             )
             header = lines[0] if chunk.kind == "table" and not _HAS_DIGIT.search(lines[0]) else ""
+            layout_only = header == STRUCTURE_HEADER
             for pos, line in enumerate(lines):
                 if header and pos == 0:
                     continue  # the header only accompanies its data rows
-                row_terms = set(terms(line))
-                if header and pos > 0:
-                    row_terms |= set(terms(header))  # a data row inherits its header's words
-                overlap = len(q & row_terms)
-                if chunk.kind == "table":
-                    label = set(terms(line.split("  ")[0]))
-                    if label and label <= q:
-                        overlap += LABEL_BONUS  # the row's own label is what the question names
-                if overlap >= need:
+                # A definition row can hold several sentences. Each is its own unit, so each gets
+                # its own citation (the verifier splits on full stops and would orphan the rest).
+                units = split_sentences(line) if chunk.kind == "table" else [line]
+                for k, unit in enumerate(units):
+                    row_terms = set(terms(unit))
+                    if header and pos > 0:
+                        row_terms |= set(terms(header))  # a data row inherits its header's words
+                    overlap = len(q & row_terms)
+                    if chunk.kind == "table" and k == 0:
+                        label = set(terms(unit.split("  ")[0]))
+                        if label and label <= q:
+                            overlap += LABEL_BONUS  # the row's own label is what the question names
+                    if overlap < need:
+                        continue
                     # the header helps only a bare numeric row ("2021  100  40"); a row that begins
                     # with its own label ("Lock-up  One year from issue.") reads fine alone
-                    labelled = bool(re.search(r"[A-Za-z]", line.split("  ")[0]))
-                    shown = f"{header} / {line}" if header and pos > 0 and not labelled else line
-                    scored.append((-overlap, rank, pos, shown.strip(), chunk))
-        scored.sort(key=lambda t: t[:3])
+                    labelled = bool(re.search(r"[A-Za-z]", unit.split("  ")[0]))
+                    shown = f"{header} / {unit}" if header and pos > 0 and not labelled else unit
+                    rank_score = overlap - (STRUCTURE_PENALTY if layout_only else 0)
+                    scored.append((-rank_score, rank, pos, k, shown.strip(), chunk))
+        scored.sort(key=lambda t: t[:4])
         out: list[str] = []
         seen: set[str] = set()
-        for _, _, _, line, chunk in scored:
+        for _, _, _, _, line, chunk in scored:
             if line in seen:
                 continue
             seen.add(line)
@@ -173,7 +182,7 @@ class Engine:
         retriever: HybridRetriever,
         gate: Gate,
         generator: Generator | None = None,
-        top_k: int = 5,
+        top_k: int = 8,
         use_gate: bool = True,
         use_verifier: bool = True,
     ) -> None:
