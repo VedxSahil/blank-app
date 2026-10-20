@@ -4,6 +4,8 @@ Retrieval with citations, an answer verifier and a refusal gate for private-equi
 Research question: how much of an LP's quarterly question set can be answered from fund documents
 automatically?
 
+Evaluation dashboard (private until shared): https://claude.ai/artifact/JrNt8i79JTM2RgqDcWSfm6
+
 **Latest:** the official ILPA Reporting Template v2.0 (real, public, a template) is now indexed and evaluated
 (`eval/ilpa/`): held-out test 52.2% accuracy, 2 hallucinations in 11 answers, 5 of 7 unanswerable questions refused.
 See `docs/viva_script.md`. Numbers below for the replica PPM are older and separate.
