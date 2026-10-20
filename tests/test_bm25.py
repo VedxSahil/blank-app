@@ -81,3 +81,21 @@ def test_stem_lets_question_wording_match_document_wording() -> None:
     )
     assert idx.search("when does it close")[0].chunk.chunk_id == "t:p1:c0"
     assert idx.search("what are the fees")[0].chunk.chunk_id == "t:p1:c1"
+
+
+def test_normalised_score_hand_worked(index: BM25Index) -> None:
+    # Corpus d0 "carry carry fee", d1 "fee" (N=2). k1=1.5.
+    # Query "carry": max = idf(carry) * 2.5 = 0.693147 * 2.5 = 1.732868; raw d0 = 0.853104
+    #   -> normalised 0.853104 / 1.732868 = 0.49231.
+    hit = index.search("carry", normalize=True)[0]
+    assert hit.score == pytest.approx(0.49231, abs=1e-4)
+    # Adding a term the corpus never uses ("waterfall") lowers the score: its idf is the largest,
+    # ln(1 + (2 + 0.5) / 0.5) = ln 6 = 1.791759, so max = (0.693147 + 1.791759) * 2.5 = 6.212266
+    #   -> 0.853104 / 6.212266 = 0.13732.
+    assert index.search("carry waterfall", normalize=True)[0].score == pytest.approx(
+        0.13732, abs=1e-4
+    )
+    # Normalisation never changes the ranking.
+    assert [h.chunk.chunk_id for h in index.search("fee", normalize=True)] == [
+        h.chunk.chunk_id for h in index.search("fee")
+    ]

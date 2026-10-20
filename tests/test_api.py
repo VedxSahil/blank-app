@@ -11,7 +11,7 @@ CHUNKS = [
 ]  # fmt: skip
 
 
-def _client(threshold: float | None = 0.5, chunks: list[Chunk] | None = None) -> TestClient:
+def _client(threshold: float | None = 0.2, chunks: list[Chunk] | None = None) -> TestClient:
     return TestClient(create_app(CHUNKS if chunks is None else chunks, threshold))
 
 

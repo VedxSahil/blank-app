@@ -89,9 +89,24 @@ class BM25Index:
                 total += self._idf[term] * tf * (self.k1 + 1) / (tf + self.k1 * norm)
         return total
 
-    def search(self, query: str, top_k: int = 5) -> list[Hit]:
-        """Top-k chunks with a positive score, best first (ties keep corpus order)."""
+    def max_score(self, query: str) -> float:
+        """Best score a chunk could reach on this query: every term present with saturated tf.
+
+        A query term that is absent from the corpus counts with the largest possible IDF, so a
+        question using words the documents never use scores low instead of being ignored.
+        """
+        n = len(self.chunks)
+        absent_idf = math.log(1 + (n + 0.5) / 0.5)
+        return sum(self._idf.get(t, absent_idf) * (self.k1 + 1) for t in set(terms(query)))
+
+    def search(self, query: str, top_k: int = 5, normalize: bool = False) -> list[Hit]:
+        """Top-k chunks with a positive score, best first (ties keep corpus order).
+
+        With `normalize`, scores are divided by `max_score(query)`: a 0..1 fraction of a perfect
+        match, comparable across short and long queries (raw BM25 is not).
+        """
         scored = [(self.score(query, i), i) for i in range(len(self.chunks))]
         scored = [(s, i) for s, i in scored if s > 0]
         scored.sort(key=lambda si: (-si[0], si[1]))
-        return [Hit(self.chunks[i], s) for s, i in scored[:top_k]]
+        denom = self.max_score(query) if normalize else 0.0
+        return [Hit(self.chunks[i], s / denom if denom else s) for s, i in scored[:top_k]]

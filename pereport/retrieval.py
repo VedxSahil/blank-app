@@ -5,7 +5,7 @@ The dense embedder (bge/e5) and cross-encoder reranker are injected through the 
 is BM25 only. Scores used by the gate:
   reranker given -> the reranker's score for the top hit;
   else dense given -> cosine similarity of the top hit;
-  else           -> BM25 score.
+  else           -> BM25 score divided by the best score the query could reach (0..1).
 Each mode needs its own calibrated gate threshold.
 """
 
@@ -115,6 +115,6 @@ class HybridRetriever:
             # hybrid without reranker: order by fusion, gate on the top hit's dense cosine
             hits = [Hit(self.chunks[i], dense_scores.get(i, 0.0)) for i, _ in fused[:top_k]]
         else:
-            by_id = {h.chunk.chunk_id: h.score for h in self._bm25.search(query, top_k)}
+            by_id = {h.chunk.chunk_id: h.score for h in self._bm25.search(query, top_k, True)}
             hits = [Hit(self.chunks[i], by_id[self.chunks[i].chunk_id]) for i, _ in fused[:top_k]]
         return Retrieval(hits, self.mode)

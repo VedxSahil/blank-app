@@ -37,7 +37,7 @@ SECTIONS = [
 
 
 def test_lines_are_bound_to_chunks_or_marked_not_disclosed() -> None:
-    engine = Engine(HybridRetriever(CORPUS), Gate(0.5))
+    engine = Engine(HybridRetriever(CORPUS), Gate(0.2))
     report = draft_report(engine, SECTIONS)
     fee, nav, irr = (s.lines[0] for s in report)
     assert fee.disclosed and fee.chunk_ids == ["fx:p1:c0"]
@@ -48,7 +48,7 @@ def test_lines_are_bound_to_chunks_or_marked_not_disclosed() -> None:
 
 
 def test_every_disclosed_line_passes_the_verifier() -> None:
-    engine = Engine(HybridRetriever(CORPUS), Gate(0.5))
+    engine = Engine(HybridRetriever(CORPUS), Gate(0.2))
     for sec in draft_report(engine, SECTIONS):
         for ln in sec.lines:
             if ln.disclosed:
@@ -56,7 +56,7 @@ def test_every_disclosed_line_passes_the_verifier() -> None:
 
 
 def test_markdown_lists_chunk_ids_and_missing_fields() -> None:
-    engine = Engine(HybridRetriever(CORPUS), Gate(0.5))
+    engine = Engine(HybridRetriever(CORPUS), Gate(0.2))
     md = render_markdown(draft_report(engine, SECTIONS))
     assert "## Fees and expenses" in md
     expected = "- **Management fee:** The management fee is 2% of committed capital [fx, p.1]."

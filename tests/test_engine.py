@@ -18,7 +18,7 @@ CORPUS = [
 
 
 def _engine(**kw: object) -> Engine:
-    return Engine(HybridRetriever(CORPUS), Gate(0.5), **kw)  # type: ignore[arg-type]
+    return Engine(HybridRetriever(CORPUS), Gate(0.2), **kw)  # type: ignore[arg-type]
 
 
 class BadGenerator:
@@ -79,23 +79,26 @@ def test_extractive_generator_needs_overlap() -> None:
 
 
 def test_acronym_asked_but_absent_is_refused_not_answered_with_a_neighbour() -> None:
-    # Corpus mentions "net" and "fund" but never IRR. Without the mandatory-term rule the NAV
-    # sentence would answer an IRR question.
+    # Corpus mentions "net" and "fund" but never IRR. The normalised gate score is only ~0.04 here
+    # (IRR is a term the corpus never uses), so the gate refuses first; with the gate wide open,
+    # the mandatory-term rule is the backstop that still refuses.
     corpus = [_c(2, "The net asset value of the fund was 500 million at 30 June 2023.")]
-    eng = Engine(HybridRetriever(corpus), Gate(0.5))
-    a = eng.ask("What is the net IRR of the fund?")
+    q = "What is the net IRR of the fund?"
+    assert Engine(HybridRetriever(corpus), Gate(0.2)).ask(q).reason == "low_score"
+    a = Engine(HybridRetriever(corpus), Gate(0.0)).ask(q)
     assert a.refused and a.reason == "key_term_missing"
 
 
 def test_glossary_expansion_lets_nav_match_spelled_out_text() -> None:
     corpus = [_c(2, "The net asset value of the fund was 500 million at 30 June 2023.")]
-    a = Engine(HybridRetriever(corpus), Gate(0.5)).ask("What is the NAV?")
+    # "NAV" itself is absent from the corpus, so it costs some normalised score; 0.1 is below it.
+    a = Engine(HybridRetriever(corpus), Gate(0.1)).ask("What is the NAV?")
     assert not a.refused and a.text.endswith("[fx, p.2].")
 
 
 def test_year_in_question_must_appear_in_answer() -> None:
     corpus = [_c(2, "Distributions were 40 million in 2022.")]
-    eng = Engine(HybridRetriever(corpus), Gate(0.5))
+    eng = Engine(HybridRetriever(corpus), Gate(0.2))
     assert eng.ask("What were distributions in 2022?").reason == "answered"
     # 2021 is absent. The extractive generator already declines (too little overlap); a generator
     # that always answers shows the mandatory-term rule catching it independently.
