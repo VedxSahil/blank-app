@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "PEReport: fund document assistant (RAG with citations, verifier and refusals)."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = ["pymupdf"]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "mypy"]
@@ -24,3 +24,11 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 python_version = "3.13"
 strict = true
 files = ["pereport", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["pymupdf.*", "fitz.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pereport.ingest", "test_ingest"]
+disallow_untyped_calls = false
