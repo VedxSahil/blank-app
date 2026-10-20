@@ -41,14 +41,18 @@ export function SourcePanel({ source, highlight }: { source: Source | null; high
 }
 
 function Highlighted({ text, highlight }: { text: string; highlight?: string }) {
-  const needle = highlight?.replace(/\s*\[[^\]]*\]\.?\s*$/, "").trim();
-  const i = needle ? text.indexOf(needle) : -1;
-  if (!needle || i < 0) return <>{text}</>;
+  // Match the cited sentence word for word, ignoring whitespace differences (table rows use
+  // double spaces and line breaks).
+  const words = (highlight ?? "").replace(/[.\s]+$/, "").split(/\s+/).filter(Boolean);
+  if (words.length < 2) return <>{text}</>;
+  const pattern = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
+  const m = new RegExp(pattern).exec(text);
+  if (!m) return <>{text}</>;
   return (
     <>
-      {text.slice(0, i)}
-      <mark className="rounded bg-accent-soft px-0.5 text-foreground">{needle}</mark>
-      {text.slice(i + needle.length)}
+      {text.slice(0, m.index)}
+      <mark className="rounded bg-accent-soft px-0.5 text-foreground">{m[0]}</mark>
+      {text.slice(m.index + m[0].length)}
     </>
   );
 }

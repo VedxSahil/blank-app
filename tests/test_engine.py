@@ -125,7 +125,7 @@ def test_table_row_whose_label_is_named_by_the_question_beats_a_longer_sentence(
         ),
     ]
     out = ExtractiveGenerator().generate("How long is the lock-up period?", corpus)
-    assert out.startswith("Term  Summary / Lock-up  One year from issue [fx, p.2]")
+    assert out.startswith("Lock-up  One year from issue [fx, p.2]")  # labelled row: no header noise
 
 
 def test_run_in_heading_is_joined_to_its_sentence() -> None:

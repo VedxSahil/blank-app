@@ -4,8 +4,11 @@ Retrieval with citations, an answer verifier and a refusal gate for private-equi
 Research question: how much of an LP's quarterly question set can be answered from fund documents
 automatically?
 
-**Status:** the engine, evaluation harness, API and web app are built and tested on invented fixture text.
-No real documents, model weights or gold set are in the repo, so no accuracy result exists yet. See
+**Status:** the engine, evaluation harness, API and web app are built and tested. They have run end to end on one
+document: `data/sample/Aurelian_Peak_Fund_Sample_PPM.pdf`, a replica of a real PPM with the names changed, supplied
+by the owner. Results on it (BM25 only, 23 held-out questions: 69.6% accuracy, 1 hallucination in 13 answers, 6 of 7
+unanswerable questions refused) are pipeline tests, **not** results on real public disclosures. No SEBI, 10-K or
+ILPA documents or model weights could be downloaded (BLOCKERS.md), so the research question is still unanswered. See
 `BLOCKERS.md`, `PROGRESS.md`, `docs/assumptions.md`, `docs/governance.md`, `docs/viva_script.md`.
 
 ```
@@ -31,6 +34,9 @@ uv venv --python 3.13 .venv && uv pip install --python .venv/bin/python -e '.[de
 make check                 # ruff, ruff format, mypy --strict, pytest
 make web-check             # tsc, eslint, next build
 make e2e                   # Playwright + axe on the FIXTURE corpus
+# on the replica sample PPM (what the viva script uses):
+python scripts/build_index.py --src data/sample --out data/chunks_sample
+python scripts/run_eval.py eval/sample/gold.jsonl --chunks data/chunks_sample --out eval/sample/dev
 # with real data (after adding URLs to data/targets.json):
 python scripts/download.py && python scripts/build_index.py
 python scripts/run_eval.py eval/gold.jsonl --freeze

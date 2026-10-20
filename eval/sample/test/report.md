@@ -1,6 +1,6 @@
 # Evaluation report (test split)
 
-SAMPLE DOCUMENT (replica PPM with names changed). Pipeline test, not a real-data result. Gate calibrated on the dev split only; test split scored once after the gold file was frozen.
+SAMPLE DOCUMENT (replica PPM with names changed). Pipeline test, not a real-data result. Gate calibrated on the dev split only; test split scored once after the gold file was frozen, at commit 1a31590. Later commits changed only how table rows are displayed in answers, the API banner and the web app; the test split was not re-run.
 
 Skipped configurations: embedding model BAAI/bge-small-en-v1.5 unavailable: ModuleNotFoundError: No module named 'sentence_transformers'; dense: skipped, model unavailable; hybrid: skipped, model unavailable; hybrid+rerank+gate+verifier: skipped, model unavailable
 

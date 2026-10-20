@@ -33,6 +33,7 @@ export default function AskPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<Source | null>(null);
+  const [highlight, setHighlight] = useState<string>("");
 
   async function submit(q: string) {
     if (!q.trim() || loading) return;
@@ -114,15 +115,28 @@ export default function AskPage() {
           (result.refused ? (
             <Refusal r={result} />
           ) : (
-            <AnswerCard key={result.text} r={result} onOpen={setSource} />
+            <AnswerCard
+              key={result.text}
+              r={result}
+              onOpen={(s, sentence) => {
+                setSource(s);
+                setHighlight(sentence);
+              }}
+            />
           ))}
       </section>
-      <SourcePanel source={source} highlight={source ? result?.text : undefined} />
+      <SourcePanel source={source} highlight={highlight} />
     </div>
   );
 }
 
-function AnswerCard({ r, onOpen }: { r: AskResult; onOpen: (s: Source) => void }) {
+function AnswerCard({
+  r,
+  onOpen,
+}: {
+  r: AskResult;
+  onOpen: (s: Source, sentence: string) => void;
+}) {
   const { shown, done } = useReveal(r.text);
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>

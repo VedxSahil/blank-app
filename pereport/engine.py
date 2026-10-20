@@ -130,7 +130,10 @@ class ExtractiveGenerator:
                     if label and label <= q:
                         overlap += LABEL_BONUS  # the row's own label is what the question names
                 if overlap >= need:
-                    shown = f"{header} / {line}" if header and pos > 0 else line
+                    # the header helps only a bare numeric row ("2021  100  40"); a row that begins
+                    # with its own label ("Lock-up  One year from issue.") reads fine alone
+                    labelled = bool(re.search(r"[A-Za-z]", line.split("  ")[0]))
+                    shown = f"{header} / {line}" if header and pos > 0 and not labelled else line
                     scored.append((-overlap, rank, pos, shown.strip(), chunk))
         scored.sort(key=lambda t: t[:3])
         out: list[str] = []

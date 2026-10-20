@@ -9,8 +9,11 @@ only governance text.
    `data/manifest.json` exists, with its SHA-256.
 3. A pull that fails is logged in BLOCKERS.md with the URL and reason, not retried silently, and
    never replaced with substitute data.
-4. Files from the earlier Aurelian Peak sample (`pe_engine.py`, `eval/gold_aurelian.json`, sample PPM)
-   are excluded from this project.
+4. The earlier Aurelian Peak work on branch `claude/stoic-edison-nxyb7y` (`pe_engine.py`,
+   `eval/gold_aurelian.json`) remains excluded. The owner later supplied a replica of a real PPM with the names
+   changed (`data/sample/Aurelian_Peak_Fund_Sample_PPM.pdf`). It is used as a labelled sample: kept out of
+   `data/manifest.json` and `sources.csv`, shown with a banner in the app, and never reported as a real-data
+   result (see `data/sample/README.md`).
 
 ## Output controls
 5. Every sentence shown to a user cites a source chunk (`[doc, p.X]`) or a computed number

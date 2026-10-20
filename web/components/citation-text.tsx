@@ -8,7 +8,7 @@ const CITATION = /\[([^\[\],]+),\s*p\.?\s*(\d+)\]/g;
 
 type Part =
   | { kind: "text"; value: string }
-  | { kind: "cite"; doc: string; page: number; key: string };
+  | { kind: "cite"; doc: string; page: number; key: string; sentence: string };
 
 export function splitCitations(text: string): Part[] {
   const parts: Part[] = [];
@@ -16,7 +16,9 @@ export function splitCitations(text: string): Part[] {
   for (const m of text.matchAll(CITATION)) {
     const idx = m.index ?? 0;
     if (idx > last) parts.push({ kind: "text", value: text.slice(last, idx) });
-    parts.push({ kind: "cite", doc: m[1].trim(), page: Number(m[2]), key: `${idx}` });
+    // the text since the previous chip is the sentence this chip supports
+    const sentence = text.slice(last, idx).trim().replace(/^[.\s]+/, "");
+    parts.push({ kind: "cite", doc: m[1].trim(), page: Number(m[2]), key: `${idx}`, sentence });
     last = idx + m[0].length;
   }
   if (last < text.length) parts.push({ kind: "text", value: text.slice(last) });
@@ -31,7 +33,7 @@ export function CitationText({
 }: {
   text: string;
   sources: Source[];
-  onOpen: (s: Source) => void;
+  onOpen: (s: Source, sentence: string) => void;
   animate?: boolean;
 }) {
   const reduce = useReducedMotion();
@@ -47,7 +49,7 @@ export function CitationText({
             key={p.key}
             type="button"
             disabled={!src}
-            onClick={() => src && onOpen(src)}
+            onClick={() => src && onOpen(src, p.sentence)}
             aria-label={`Open source: ${p.doc}, p.${p.page}`}
             initial={animate && !reduce ? { opacity: 0, scale: 0.8 } : false}
             animate={{ opacity: 1, scale: 1 }}

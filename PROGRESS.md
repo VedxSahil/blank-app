@@ -72,13 +72,40 @@ and em dashes; no fund data. A first render showed clipped table cells (fixed 10
 header; fixed and re-rendered. Font is Inter, the closest to the app's system font stack. The frames were built to
 match the shipped web app, not the other way round, so the app remains the source of truth.
 
+## Loop 3, 2026-10-20 (user supplied the replica PPM and said to use it)
+Context: the owner explained the file is a replica of a real document with the names changed. It states it is
+fictional, so it is treated as a labelled sample (data/sample/README.md, banner in the app, separate manifest),
+and results on it are not reported as real-data results.
+
+Defects the first real PDF exposed, all fixed with tests:
+- Table cells came out with spaces stripped ("Open-endedZandrianpublic..."): cells are now read from their own boxes.
+- Tables arrived one visual line per row: rows regrouped by the PDF's ruled separators (heuristic fallback).
+- Prose with figures was classified as a table and split into fragments; a 9-row term sheet was one diluted chunk:
+  tables now need cell gaps, and each row is its own chunk.
+- Verifier false positive: a number inside an entity ("Category 1 Global Business Licence") corrupted it.
+- Raw BM25 scores depend on query length (refused "What is the management fee?"): gate now uses a 0..1 normalised score.
+- Weak stemming (closing/close), question filler words, run-in headings ("Directors' remuneration. USD 1,500"),
+  numbered-list markers leaking into sentences.
+
+Evaluation (eval/sample/, 48 questions: 30 answerable, 3 partial, 15 unanswerable; dev 25 / test 23; gold frozen,
+SHA-256 24c239ea...; labels audited mechanically, 4 page labels corrected):
+| Split | Config | Accuracy | Answered correctly | Hallucinations / answers | Unanswerable refused |
+|---|---|---|---|---|---|
+| dev (used for tuning) | bm25 | 68.0% | 64.0% | 7/24 | 1 of 8 |
+| dev (used for tuning) | bm25+gate+verifier | 84.0% | 60.0% | 2/18 | 6 of 8 |
+| test (scored once, commit 1a31590) | bm25 | 60.9% | 60.9% | 7/23 | 0 of 7 |
+| test (scored once, commit 1a31590) | bm25+gate+verifier | 69.6% | 43.5% | 1/13 | 6 of 7 |
+Dense, hybrid and reranker rows skipped (model weights unreachable). The dev-to-test drop (84% to 70%) is what
+fitting to a small dev set looks like.
+Gates: `make check` 97 passed; tsc, eslint, next build clean; Playwright 12 passed (axe, banner, 375 px).
+
 ## Exit criteria status
 | Criterion | Status |
 |---|---|
 | Zero test/lint/build errors | Met for what exists (above). Docker build not run. |
-| Hallucination ≤ 2% on frozen test set | **Not measured.** No gold set. Also needs ≥188 answered questions with zero errors to bound at 2%. |
-| Demo answers verified against source pages | **Not met.** No real documents. |
-| Refusal works on unsupported questions | Works on fixture tests; unproven on real documents. |
+| Hallucination ≤ 2% on frozen test set | **Not met.** Sample test split: 1/13 answers (7.7%, 95% upper bound 33%). Needs a real corpus and ≥188 error-free answers to show 2%. |
+| Demo answers verified against source pages | **Met on the replica sample only**: 3 answers and 1 refusal compared with the PDF page images by the author; owner re-check pending (docs/viva_script.md). |
+| Refusal works on unsupported questions | Works on the sample: 6 of 7 unanswerable test questions refused, 1 missed ("legal advisors in Calderon"). Not shown on real disclosures. |
 | ≥300 MB of real data and indexes | **Not met.** `data/` holds only an empty `targets.json`. |
 | README with setup, architecture, viva script | README and docs/viva_script.md written; the viva table is blank by design. |
 | docker compose fresh-clone run | **Not met.** No Docker daemon (B-D1). |

@@ -166,3 +166,4 @@ cython_debug/
 data/raw/
 data/chunks/
 data/index/
+data/chunks_sample/

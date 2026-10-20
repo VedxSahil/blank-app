@@ -74,3 +74,19 @@ documents have been processed yet (see BLOCKERS.md).
 - Playwright and axe run against `scripts/serve_fixture.py`, an API over four invented sentences. They
   prove behaviour (citations, refusal, reduced motion, contrast, no horizontal scroll at 375 px), not accuracy.
 - Streaming text is a client-side word-by-word reveal of the finished answer, not token streaming.
+
+## Sample document results (`eval/sample/`)
+- The document is a replica of a real PPM with the names changed, supplied by the owner. It is not an
+  original public source and is a hedge-fund-style open-ended fund PPM, not a PE quarterly report.
+- The 48-question gold set (`eval/sample/gold.jsonl`) was written by the engine's author from the 20 pages,
+  before the engine was run on it. It is not an independent labelling. Facts and pages were audited
+  mechanically against the parsed page text; four page labels were corrected after that audit.
+- Dev split: 25 questions, used for calibration and for diagnosing failures (several fixes were made from
+  dev failures). Test split: 23 questions, scored once after the gold file was frozen (SHA-256 in
+  `eval/sample/gold.jsonl.lock`, run logged in `gold.jsonl.testruns.log`).
+- With 23 test questions the intervals are wide (hallucination 1/13, 95% upper bound 33%). The ≤2% target
+  cannot be assessed at this size.
+- Only BM25 configurations ran. Dense, hybrid and reranker rows are skipped because the model weights are
+  unreachable (BLOCKERS.md B-N9, B-N10).
+- Table parsing relies on ruled row separators found in this PDF's drawing data; PDFs without them fall back
+  to a punctuation heuristic and may group wrapped rows wrongly.
