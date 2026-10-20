@@ -61,11 +61,12 @@ def is_heading(line: str) -> bool:
 
 
 def _is_table(lines: list[str]) -> bool:
-    """A block is a table when at least half its lines (min 2) carry two or more numbers."""
+    """A table: half the lines (min 2) hold two numbers, or 80% have double-space cell gaps."""
     if len(lines) < 2:
         return False
     numeric = sum(1 for ln in lines if len(_NUMERIC_TOKEN.findall(ln)) >= 2)
-    return numeric * 2 >= len(lines)
+    columns = sum(1 for ln in lines if "  " in ln)  # ingest joins table cells with two spaces
+    return numeric * 2 >= len(lines) or columns * 5 >= len(lines) * 4
 
 
 def _split_words(text: str, max_words: int) -> list[str]:

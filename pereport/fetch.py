@@ -77,3 +77,28 @@ def pull(
             [entry["url"], entry["publisher"], when, entry["local_path"], target.get("notes", "")]
         )
     return None
+
+
+def register_local(
+    path: Path, manifest_path: Path, origin: str, kind: str, notes: str, now: datetime | None = None
+) -> dict[str, Any]:
+    """Record a file supplied by the user (not downloaded) in its own manifest.
+
+    `kind` says what it is, for example "replica_names_changed". Such files are kept out of
+    data/manifest.json and sources.csv, which list only genuine public pulls.
+    """
+    entry: dict[str, Any] = {
+        "local_path": str(path),
+        "sha256": sha256_file(path),
+        "bytes": path.stat().st_size,
+        "origin": origin,
+        "kind": kind,
+        "notes": notes,
+        "date_registered": (now or datetime.now(UTC)).isoformat(timespec="seconds"),
+    }
+    manifest: list[dict[str, Any]] = []
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text())
+    manifest = [m for m in manifest if m["local_path"] != entry["local_path"]] + [entry]
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    return entry

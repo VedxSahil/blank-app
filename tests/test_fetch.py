@@ -66,3 +66,17 @@ def test_failed_pull_returns_error_and_leaves_nothing(server: str, tmp_path: Pat
     assert err is not None and "404" in err
     assert not (tmp_path / "raw" / "m.pdf").exists()
     assert not (tmp_path / "m.json").exists() and not (tmp_path / "s.csv").exists()
+
+
+def test_register_local_records_hash_and_kind_without_touching_real_sources(tmp_path: Path) -> None:
+    from pereport.fetch import register_local
+
+    f = tmp_path / "doc.pdf"
+    f.write_bytes(PAYLOAD)
+    manifest = tmp_path / "sample_manifest.json"
+    when = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    e = register_local(f, manifest, "user upload", "replica_names_changed", "note", now=when)
+    assert e["sha256"] == ABC_SHA and e["bytes"] == 3 and e["kind"] == "replica_names_changed"
+    register_local(f, manifest, "user upload", "replica_names_changed", "note", now=when)
+    assert len(json.loads(manifest.read_text())) == 1  # re-registering replaces, not duplicates
+    assert not (tmp_path / "sources.csv").exists()

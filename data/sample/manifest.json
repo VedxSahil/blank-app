@@ -1,0 +1,11 @@
+[
+  {
+    "local_path": "data/sample/Aurelian_Peak_Fund_Sample_PPM.pdf",
+    "sha256": "a7db7d156031c4b5c755fa85e25a85180d4b73b789b5884fbcb5de12f28260e6",
+    "bytes": 536916,
+    "origin": "uploaded by the project owner in the Claude session on 2026-10-20 (no URL)",
+    "kind": "replica_names_changed",
+    "notes": "Per the owner: based on a real document; this is a replica with names changed. The document itself states it is a SAMPLE / ILLUSTRATIVE DOCUMENT and that every entity, person, regulator, law, licence and figure in it is fictional. It is a pipeline test document, not an original public source, and is a hedge-fund style open-ended PPM rather than a PE quarterly report.",
+    "date_registered": "2026-10-20T10:52:02+00:00"
+  }
+]
