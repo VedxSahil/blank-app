@@ -4,10 +4,11 @@ version = "0.1.0"
 description = "PEReport: fund document assistant (RAG with citations, verifier and refusals)."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["pymupdf"]
+dependencies = ["pymupdf", "fastapi", "uvicorn", "matplotlib"]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "mypy"]
+dev = ["pytest", "ruff", "mypy", "httpx"]
+models = ["sentence-transformers"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -5,6 +5,7 @@ Needs data/chunks/*.jsonl (scripts/build_index.py). Configurations whose models 
 are skipped and listed in the report; nothing is substituted.
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from pereport.evalrun import (
     calibrate_gate_threshold,
     freeze_gold,
     load_gold,
+    metrics_json,
     run_split,
     write_charts,
     write_report,
@@ -70,11 +72,15 @@ def main(argv: list[str]) -> int:
             chunks, embedder if dense else None, reranker if rerank else None, use_bm25=bm25
         )
         threshold = calibrate_gate_threshold(retriever, dev) if gate_on else float("-inf")
+        if name == "bm25+gate+verifier":  # the configuration the API serves
+            Path("eval").mkdir(exist_ok=True)
+            Path("eval/gate.json").write_text(json.dumps({"bm25": threshold}) + "\n")
         engine = Engine(retriever, Gate(threshold), use_gate=gate_on, use_verifier=ver_on)
         results[name] = run_split(engine, questions, split, gold_path, name)
     note = "Skipped configurations: " + "; ".join(skipped) if skipped else ""
     Path("eval").mkdir(exist_ok=True)
     metrics = write_report("eval/report.md", split, results, note)
+    Path("eval/metrics.json").write_text(metrics_json(metrics))
     write_results_csv("eval/results.csv", results)
     write_charts("eval/charts", metrics)
     print(Path("eval/report.md").read_text())
