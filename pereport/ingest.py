@@ -1,14 +1,18 @@
 """PDF parsing with PyMuPDF: page numbers and table rows are preserved.
 
-Table cells are written one row per line, separated by two spaces, so the chunker's table
-detector (two or more numbers per line) keeps rows whole. Pages with almost no text but with
+Table cells are written one row per line, separated by two spaces, which is how the chunker
+recognises a table and keeps one chunk per row. Pages with almost no text but with
 images are listed in `ocr_pages`; OCR is not run automatically (see docs/assumptions.md).
 """
 
+import re
 from bisect import bisect_left
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 
+import openpyxl
 import pymupdf
 
 from pereport.chunker import Page
@@ -135,3 +139,121 @@ def parse_pdf(path: str | Path) -> ParsedDoc:
                 ocr.append(i)
             pages.append(Page(i, text))
     return ParsedDoc(pages, ocr)
+
+
+# ---------------------------------------------------------------------------------------------
+# Spreadsheets (.xlsx): each sheet becomes one "page", so a citation [doc, p.4] means sheet 4.
+# ---------------------------------------------------------------------------------------------
+
+_TOP_HEADING = re.compile(r"^[A-Z]\.\d*\s+\S")
+CALCULATED = "(calculated row)"
+
+
+def _cell_text(v: object) -> str:
+    s = " ".join(str(v).split())
+    return CALCULATED if s == "(=)" else s
+
+
+def _is_value(v: object) -> bool:
+    return isinstance(v, int | float | datetime | date) and not isinstance(v, bool)
+
+
+def _grouped_table(rows: list[list[tuple[int, object]]]) -> tuple[int, list[int]] | None:
+    """Detect a header row followed by many multi-column rows whose first column is mostly blank.
+
+    Returns (index of the header row, columns of the header) for sheets like a definitions table
+    (Section | Field | Definition) where "Section" is filled only when it changes.
+    """
+    for i, row in enumerate(rows):
+        cols = [c for c, v in row if isinstance(v, str)]
+        if len(cols) < 3:
+            continue
+        body = [r for r in rows[i + 1 :] if any(isinstance(v, str) for _, v in r)]
+        if len(body) < 10:
+            return None
+        has_all_but_first = sum(1 for r in body if all(c in {c for c, v in r} for c in cols[1:]))
+        first_filled = sum(1 for r in body if cols[0] in {c for c, v in r})
+        if has_all_but_first >= 0.9 * len(body) and first_filled <= 0.4 * len(body):
+            return i, cols
+        return None
+    return None
+
+
+def _sheet_lines(ws: Any, include_numbers: bool) -> list[str]:
+    rows: list[list[tuple[int, object]]] = []
+    bold: dict[int, bool] = {}
+    for r in ws.iter_rows():
+        cells = [(c.column, c.value) for c in r if c.value not in (None, "")]
+        rows.append(cells)
+        for c in r:
+            if isinstance(c.value, str) and c.column <= 3:
+                bold.setdefault(c.row, bool(c.font and c.font.bold))
+    lines: list[str] = [f"# {ws.title}"]
+    grouped = _grouped_table(rows)
+    if grouped is not None:
+        head_i, cols = grouped
+        header = "  ".join(_cell_text(v) for c, v in rows[head_i] if c in cols[1:])
+        for row in rows[head_i + 1 :]:
+            by_col = {c: _cell_text(v) for c, v in row if isinstance(v, str)}
+            if not by_col:
+                continue
+            if cols[0] in by_col:
+                lines += ["", f"# {by_col[cols[0]]}", header]
+            lines.append("  ".join(by_col[c] for c in cols[1:] if c in by_col))
+        return lines
+
+    top = sub = ""
+    need_header = False
+
+    def context() -> str:
+        return " > ".join(x for x in (top, sub) if x) or ws.title
+
+    for n, row in enumerate(rows, start=1):
+        raw = [_cell_text(v) for _, v in row if isinstance(v, str)]
+        texts = [t for t in raw if t != CALCULATED]
+        calculated = len(texts) != len(raw)
+        has_value = any(_is_value(v) for _, v in row)
+        if not texts:
+            continue  # empty row, or a bare "(=)" formula marker
+        if _TOP_HEADING.match(texts[0]):
+            top, sub = texts[0], ""
+            lines += ["", f"# {top}"]
+            need_header = len(texts) == 1  # header is written lazily, only if line items follow
+            if len(texts) > 1:
+                lines += ["Line item  Section", "Column groups  " + " / ".join(texts[1:])]
+            continue
+        if len(texts) >= 2:
+            lines.append("  ".join(texts))
+            continue
+        t = texts[0]
+        words = len(t.split())
+        if words >= 12 or t.endswith("."):
+            lines += ["", t, ""]
+        elif not has_value and not calculated and bold.get(n, False):
+            sub, need_header = t, True
+            lines += ["", f"# {context()}"]
+        else:
+            if need_header:
+                lines.append("Line item  Section")
+                need_header = False
+            lines.append(f"{t}  {context()}" + (f" {CALCULATED}" if calculated else ""))
+        if include_numbers and has_value:
+            lines[-1] += "  " + " ".join(str(v) for _, v in row if _is_value(v))
+    return lines
+
+
+def parse_xlsx(path: str | Path, include_numbers: bool = False) -> ParsedDoc:
+    """Parse a workbook into one page per sheet (page number = sheet position, from 1).
+
+    Only text cells are indexed. Numeric and date cells are dropped unless `include_numbers`, so a
+    template's example figures cannot later be quoted as if they were real fund data. Headings are
+    rows with no values (or lettered like "A.1 ..."), line items become one table row each carrying
+    their heading path, and a header-plus-body table with a sparse first column (a definitions
+    table) gets that column forward-filled into headings.
+    """
+    wb = openpyxl.load_workbook(path, data_only=True)
+    pages = [
+        Page(i, "\n".join(_sheet_lines(ws, include_numbers)) if ws.sheet_state == "visible" else "")
+        for i, ws in enumerate(wb.worksheets, start=1)
+    ]
+    return ParsedDoc(pages)

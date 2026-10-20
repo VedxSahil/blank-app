@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "PEReport: fund document assistant (RAG with citations, verifier and refusals)."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["pymupdf", "fastapi", "uvicorn", "matplotlib"]
+dependencies = ["pymupdf", "openpyxl", "fastapi", "uvicorn", "matplotlib"]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "mypy", "httpx"]
@@ -30,7 +30,7 @@ strict = true
 files = ["pereport", "tests", "scripts"]
 
 [[tool.mypy.overrides]]
-module = ["pymupdf.*", "fitz.*", "sentence_transformers.*"]
+module = ["pymupdf.*", "fitz.*", "sentence_transformers.*", "openpyxl.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

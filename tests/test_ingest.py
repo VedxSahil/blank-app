@@ -102,3 +102,108 @@ def test_sample_ppm_tables_keep_words_and_rows() -> None:
         "Investment Manager  Aurelian Asset Management Ltd; discretionary" in summary
     )  # wrapped label
     assert "Legal Advisors (Zandria)  Isolde Marchetti, Attorney" in pages[1].text
+
+
+def _make_workbook(path: Path) -> None:
+    import datetime
+
+    import openpyxl
+    from openpyxl.styles import Font
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Template"
+    ws["B2"] = "A. Statement for LP #9"
+    ws["B3"] = "A.1 Reconciliation"
+    ws["E3"] = "LP share"
+    ws["F3"] = "Total fund"
+    ws["B4"] = "Fees"  # bold, no values: a sub-heading
+    ws["B4"].font = Font(bold=True)
+    ws["B5"] = "Management Fees"
+    ws["E5"], ws["F5"] = 123456, 987654
+    ws["B6"] = "Total Fees"
+    ws["E6"] = "(=)"
+    ws["F6"] = 111111
+    ws["B7"] = "Footnote: an amount in this row needs a description, as explained here."
+    ws["B8"] = "(=)"  # bare formula marker: dropped
+    ws["H2"] = datetime.date(2022, 2, 23)  # date cell: never indexed
+    wb.create_sheet("Defs")
+    d = wb["Defs"]
+    d["B2"], d["C2"], d["D2"] = "Section", "Field", "Definition"
+    for i in range(10):
+        r = 3 + i
+        if i in (0, 5):
+            d.cell(r, 2).value = f"S{i} Group"
+        d.cell(r, 3).value = f"Field {i}"
+        d.cell(r, 4).value = f"Meaning of field {i}."
+    wb.save(path)
+
+
+def test_parse_xlsx_headings_line_items_numbers_and_defs(tmp_path: Path) -> None:
+    from pereport.ingest import parse_xlsx
+
+    x = tmp_path / "t.xlsx"
+    _make_workbook(x)
+    pages = parse_xlsx(x).pages
+    assert [p.page for p in pages] == [1, 2]  # one page per sheet
+    t = pages[0].text.splitlines()
+    assert t[0] == "# Template"
+    assert "# A. Statement for LP #9" in t
+    # lettered row with extra text cells: heading plus header and column groups
+    assert t[t.index("# A.1 Reconciliation") + 1 :][:2] == [
+        "Line item  Section",
+        "Column groups  LP share / Total fund",
+    ]
+    assert "# A.1 Reconciliation > Fees" in t  # bold row without values: sub-heading
+    assert "Management Fees  A.1 Reconciliation > Fees" in t
+    assert "Total Fees  A.1 Reconciliation > Fees (calculated row)" in t
+    assert any(ln.startswith("Footnote: an amount") for ln in t)  # long sentence stays a paragraph
+    joined = pages[0].text
+    for bad in ("123456", "987654", "111111", "2022", "(=)"):
+        assert bad not in joined  # values, dates and bare markers are not indexed
+    # definitions table: sparse first column becomes headings, header repeated after each
+    d = pages[1].text.splitlines()
+    assert d[d.index("# S0 Group") + 1 :][:2] == [
+        "Field  Definition",
+        "Field 0  Meaning of field 0.",
+    ]
+    assert "# S5 Group" in d and d[d.index("# S5 Group") + 1] == "Field  Definition"
+    assert "Field 7  Meaning of field 7." in d
+
+
+def test_xlsx_to_chunks_keeps_sheet_page_section_and_rows(tmp_path: Path) -> None:
+    from pereport.ingest import parse_xlsx
+
+    x = tmp_path / "t.xlsx"
+    _make_workbook(x)
+    chunks = chunk_pages(parse_xlsx(x).pages, doc="t")
+    f7 = next(c for c in chunks if "Field 7" in c.text)
+    assert (f7.page, f7.section, f7.kind) == (2, "S5 Group", "table")
+    assert f7.text == "Field  Definition\nField 7  Meaning of field 7."
+    mf = next(c for c in chunks if c.text.startswith("Line item  Section\nManagement Fees"))
+    assert mf.page == 1 and mf.section == "A.1 Reconciliation > Fees"
+
+
+def test_ilpa_template_real_file_regression() -> None:
+    import pytest
+
+    from pereport.ingest import parse_xlsx
+
+    f = Path("data/real/ILPA_Reporting_Template_v2.0.xlsx")
+    if not f.exists():
+        pytest.skip("ILPA template not present")
+    pages = parse_xlsx(f).pages
+    assert [p.page for p in pages] == [
+        1,
+        2,
+        3,
+        4,
+        5,
+    ]  # Guidance, Template, FoF, Definitions, Revisions
+    defs = pages[3].text
+    assert "Placement Fees  Fees/costs paid to the investment adviser" in defs
+    assert "# A.1 NAV Reconciliation" in defs
+    assert "Contributions \u2013 Cash & Non-Cash" in pages[1].text
+    import re
+
+    assert not re.search(r"\d{5,}", "\n".join(p.text for p in pages))  # no example figures indexed

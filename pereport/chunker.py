@@ -12,7 +12,7 @@ from dataclasses import dataclass
 DEFAULT_MAX_WORDS = 120
 FRONT_MATTER = "Front matter"
 
-_NUMBERED_HEADING = re.compile(r"^(?:\d+(?:\.\d+)+|\d+\.|[IVX]+\.)\s+\S")
+_NUMBERED_HEADING = re.compile(r"^(?:\d+(?:\.\d+)+|\d+\.|[IVX]+\.|[A-Z]\.\d*)\s+\S")
 _KEYWORD_HEADING = re.compile(
     r"^(?:item\s+\d+[a-z]?\.?|section\s+\d+|part\s+[ivx]+|schedule\s+\w+)\b", re.I
 )
@@ -44,6 +44,10 @@ class Chunk:
 def is_heading(line: str) -> bool:
     """Heuristic heading test: numbered or keyword lines, or short ALL-CAPS lines."""
     s = line.strip()
+    if s.startswith("# ") and len(s) > 2:
+        return (
+            True  # explicit heading written by ingest (spreadsheets have no layout to infer from)
+        )
     words = s.split()
     if not s or len(words) > 12 or (s.endswith((".", ",", ";")) and not _NUMBERED_HEADING.match(s)):
         return False
@@ -134,7 +138,7 @@ def _page_blocks(text: str, section: str) -> tuple[list[tuple[str, str, str]], s
             flush()
         elif is_heading(line):
             flush()
-            section = line
+            section = line[2:].strip() if line.startswith("# ") else line
         else:
             # numbered-list markers ("11. Transactions...") would leak into the previous sentence
             buf.append(_LIST_MARKER.sub("", line))

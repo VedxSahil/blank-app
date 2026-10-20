@@ -1,0 +1,11 @@
+[
+  {
+    "local_path": "data/real/ILPA_Reporting_Template_v2.0.xlsx",
+    "sha256": "3a6582e7720109426353483cd1dda2bec04122e92df1415aaab383f77eb3ecdc",
+    "bytes": 124779,
+    "origin": "uploaded by the project owner in the Claude session on 2026-10-20 (exact download URL not recorded)",
+    "kind": "official_public_template",
+    "notes": "ILPA Reporting Template (v. 2.0), last updated January 22, 2025, published by the Institutional Limited Partners Association (ilpa.org). Five sheets: Suggested Guidance, Reporting Template, Fund of Funds-Underlying, Definitions, Summary of Revisions. A genuine public document, but a TEMPLATE: the Reporting Template sheet carries ILPA's illustrative example figures for 'Best Practices Fund II, L.P.', which are deliberately not indexed (numbers and dates are dropped at parse time).",
+    "date_registered": "2026-10-20T11:22:38+00:00"
+  }
+]
