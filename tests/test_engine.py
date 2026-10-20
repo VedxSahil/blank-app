@@ -97,8 +97,8 @@ def test_year_in_question_must_appear_in_answer() -> None:
     corpus = [_c(2, "Distributions were 40 million in 2022.")]
     eng = Engine(HybridRetriever(corpus), Gate(0.5))
     assert eng.ask("What were distributions in 2022?").reason == "answered"
-    # 2021 is absent from the corpus. The extractive generator already declines (too little overlap);
-    # a generator that always answers shows the mandatory-term rule catching it independently.
+    # 2021 is absent. The extractive generator already declines (too little overlap); a generator
+    # that always answers shows the mandatory-term rule catching it independently.
     assert eng.ask("What were distributions in 2021?").refused
 
     class Always:
