@@ -24,6 +24,19 @@ def tokenize(text: str) -> list[str]:
     return out
 
 
+STOPWORDS = frozenset({
+    "a", "an", "the", "of", "and", "or", "to", "in", "on", "at", "by", "for", "with", "from",
+    "as", "is", "are", "was", "were", "be", "been", "it", "its", "this", "that", "these", "those",
+    "what", "which", "who", "whom", "how", "when", "where", "why", "do", "does", "did", "has",
+    "have", "had", "not", "no",
+})  # fmt: skip
+
+
+def terms(text: str) -> list[str]:
+    """Index/query terms: tokens without stopwords (numbers are never stopwords)."""
+    return [t for t in tokenize(text) if t not in STOPWORDS]
+
+
 @dataclass(frozen=True)
 class Hit:
     chunk: Chunk
@@ -35,7 +48,7 @@ class BM25Index:
         self.chunks = chunks
         self.k1 = k1
         self.b = b
-        self._tf = [Counter(tokenize(c.text)) for c in chunks]
+        self._tf = [Counter(terms(c.text)) for c in chunks]
         self._len = [sum(tf.values()) for tf in self._tf]
         self._avgdl = sum(self._len) / len(chunks) if chunks else 0.0
         df: Counter[str] = Counter()
@@ -48,7 +61,7 @@ class BM25Index:
         total = 0.0
         tf_i = self._tf[i]
         norm = 1 - self.b + self.b * self._len[i] / self._avgdl if self._avgdl else 1.0
-        for term in set(tokenize(query)):
+        for term in set(terms(query)):
             tf = tf_i.get(term, 0)
             if tf:
                 total += self._idf[term] * tf * (self.k1 + 1) / (tf + self.k1 * norm)

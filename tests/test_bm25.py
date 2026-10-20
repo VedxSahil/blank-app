@@ -49,3 +49,10 @@ def test_empty_corpus() -> None:
 
 def test_top_k_limits_results(index: BM25Index) -> None:
     assert len(index.search("fee", top_k=1)) == 1
+
+
+def test_stopwords_do_not_create_hits() -> None:
+    idx = BM25Index([_chunk(0, "carry is 20%"), _chunk(1, "the fee is 2%")])
+    # "what is the" are all stopwords; "waterfall" is absent -> no evidence at all.
+    assert idx.search("what is the waterfall") == []
+    assert [h.chunk.chunk_id for h in idx.search("what is the fee")] == ["t:p1:c1"]
