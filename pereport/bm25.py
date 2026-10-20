@@ -1,0 +1,62 @@
+"""Okapi BM25 in plain Python (Lucene-style non-negative IDF).
+
+score(q, d) = sum over query terms t of
+    idf(t) * tf * (k1 + 1) / (tf + k1 * (1 - b + b * |d| / avgdl))
+    idf(t)  = ln(1 + (N - n_t + 0.5) / (n_t + 0.5))
+where N = number of chunks, n_t = chunks containing t, tf = count of t in d.
+"""
+
+import math
+import re
+from collections import Counter
+from dataclasses import dataclass
+
+from pereport.chunker import Chunk
+
+_TOKEN = re.compile(r"[a-z0-9]+(?:[.,][a-z0-9]+)*")
+
+
+def tokenize(text: str) -> list[str]:
+    """Lowercase word tokens. Thousands separators are dropped so '1,250.5' matches '1250.5'."""
+    out: list[str] = []
+    for tok in _TOKEN.findall(text.lower()):
+        out.append(tok.replace(",", "") if any(c.isdigit() for c in tok) else tok)
+    return out
+
+
+@dataclass(frozen=True)
+class Hit:
+    chunk: Chunk
+    score: float
+
+
+class BM25Index:
+    def __init__(self, chunks: list[Chunk], k1: float = 1.5, b: float = 0.75) -> None:
+        self.chunks = chunks
+        self.k1 = k1
+        self.b = b
+        self._tf = [Counter(tokenize(c.text)) for c in chunks]
+        self._len = [sum(tf.values()) for tf in self._tf]
+        self._avgdl = sum(self._len) / len(chunks) if chunks else 0.0
+        df: Counter[str] = Counter()
+        for tf in self._tf:
+            df.update(tf.keys())
+        n = len(chunks)
+        self._idf = {t: math.log(1 + (n - c + 0.5) / (c + 0.5)) for t, c in df.items()}
+
+    def score(self, query: str, i: int) -> float:
+        total = 0.0
+        tf_i = self._tf[i]
+        norm = 1 - self.b + self.b * self._len[i] / self._avgdl if self._avgdl else 1.0
+        for term in set(tokenize(query)):
+            tf = tf_i.get(term, 0)
+            if tf:
+                total += self._idf[term] * tf * (self.k1 + 1) / (tf + self.k1 * norm)
+        return total
+
+    def search(self, query: str, top_k: int = 5) -> list[Hit]:
+        """Top-k chunks with a positive score, best first (ties keep corpus order)."""
+        scored = [(self.score(query, i), i) for i in range(len(self.chunks))]
+        scored = [(s, i) for s, i in scored if s > 0]
+        scored.sort(key=lambda si: (-si[0], si[1]))
+        return [Hit(self.chunks[i], s) for s, i in scored[:top_k]]
