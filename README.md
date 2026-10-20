@@ -4,6 +4,10 @@ Retrieval with citations, an answer verifier and a refusal gate for private-equi
 Research question: how much of an LP's quarterly question set can be answered from fund documents
 automatically?
 
+**Latest:** the official ILPA Reporting Template v2.0 (real, public, a template) is now indexed and evaluated
+(`eval/ilpa/`): held-out test 52.2% accuracy, 2 hallucinations in 11 answers, 5 of 7 unanswerable questions refused.
+See `docs/viva_script.md`. Numbers below for the replica PPM are older and separate.
+
 **Status:** the engine, evaluation harness, API and web app are built and tested. They have run end to end on one
 document: `data/sample/Aurelian_Peak_Fund_Sample_PPM.pdf`, a replica of a real PPM with the names changed, supplied
 by the owner. Results on it (BM25 only, 23 held-out questions: 69.6% accuracy, 1 hallucination in 13 answers, 6 of 7
@@ -12,7 +16,7 @@ ILPA documents or model weights could be downloaded (BLOCKERS.md), so the resear
 `BLOCKERS.md`, `PROGRESS.md`, `docs/assumptions.md`, `docs/governance.md`, `docs/viva_script.md`.
 
 ```
-pereport/ingest.py      PDF -> pages (PyMuPDF), page numbers and table rows preserved
+pereport/ingest.py      PDF -> pages (PyMuPDF); .xlsx -> one page per sheet, text only
 pereport/chunker.py     section-aware chunks with doc, page, section, date, fund metadata
 pereport/bm25.py        Okapi BM25 (plain Python)
 pereport/retrieval.py   BM25 + dense (RRF) + optional reranker, models injected

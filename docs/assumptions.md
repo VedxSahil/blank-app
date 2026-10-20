@@ -90,3 +90,24 @@ documents have been processed yet (see BLOCKERS.md).
   unreachable (BLOCKERS.md B-N9, B-N10).
 - Table parsing relies on ruled row separators found in this PDF's drawing data; PDFs without them fall back
   to a punctuation heuristic and may group wrapped rows wrongly.
+
+## ILPA Reporting Template results (`eval/ilpa/`)
+- The document is the real official template, but a template: questions are about its definitions and structure
+  (what a field means, what a section lists), never about a fund's performance or terms. The "LP question set"
+  here is therefore not the research question's real target (fund reports and PPMs).
+- Spreadsheet handling: each sheet is one page (a citation `p.N` means sheet N). Only text cells are indexed;
+  numbers and dates are dropped at parse time because the Reporting Template sheet holds ILPA's illustrative
+  example figures for a sample fund. Headings are inferred (lettered "A.1" rows, bold rows without values,
+  bold heading rows carrying their first item); line items become one row each, with a "(template line item in
+  <section path>)" note instead of a bare section name, so layout text cannot read like a field value.
+- 48-question gold set written by the engine's author from the definitions text, before running the engine; facts
+  and pages audited mechanically (one page list corrected). Dev 25 / test 23; frozen (SHA-256 in
+  `eval/ilpa/gold.jsonl.lock`; run logged in `gold.jsonl.testruns.log`).
+- The test split was scored once, at commit a1284f8. Afterwards two provenance fixes changed the chunk text
+  (the "(template line item ...)" wording and the section path of reconciliation blocks). The test split was not
+  re-run, so the reported test numbers describe the earlier parser; the dev split was re-run (76%, 0/13).
+- Two test questions the system answered wrongly are structural near-misses, not wording problems: "general
+  partner" (the template only mentions it inside a definition) and "fund size of the Parent Fund" (an empty field
+  in a blank layout). A retrieval model or entailment check is needed to reject them.
+- Letter-numbered lines such as "A.1 Heading" are treated as headings in PDFs too; a name like "R. K. Ashworth" on
+  its own line could be mistaken for one.

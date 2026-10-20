@@ -99,14 +99,36 @@ Dense, hybrid and reranker rows skipped (model weights unreachable). The dev-to-
 fitting to a small dev set looks like.
 Gates: `make check` 97 passed; tsc, eslint, next build clean; Playwright 12 passed (axe, banner, 375 px).
 
+## Loop 4, 2026-10-20 (user uploaded the official ILPA Reporting Template v2.0)
+First genuine public document. A template, so it tests definitions and structure, not fund answers. Registered in
+`data/real/` (SHA-256 3a6582e7...), `sources.csv`, `data/real/manifest.json`.
+Built: `parse_xlsx` (one page per sheet, text only, headings and line items inferred; example figures never indexed);
+chunker recognises "# " and "A.1" headings. Defects found on the real file and fixed with tests:
+- A definition row holds several sentences; citing the row once made the verifier strip all but the first
+  (faithfulness 66.7%). Each sentence is now cited separately (faithfulness 100%).
+- Layout rows tied with definition rows and won on retrieval order: layout rows now lose ties.
+- A synthesised second cell (the section name) read like a field value ("Parent Fund Size: Fund of Funds-Underlying"):
+  reworded to "(template line item in <path>)".
+- A bold heading row carrying its first item (Reconciliation for ...) was missed, giving a wrong section path.
+Evaluation (eval/ilpa/, 48 questions: 30 answerable, 3 partial, 15 unanswerable; dev 25 / test 23; gold frozen,
+SHA-256 413abce3...; one page list corrected after the audit):
+| Split | Config | Accuracy | Answered correctly | Hallucinations / answers | Unanswerable refused |
+|---|---|---|---|---|---|
+| dev (tuned on) | bm25+gate+verifier | 76.0% | 44.0% | 0/13 | 8 of 8 |
+| test (scored once, commit a1284f8) | bm25 | 56.5% | 52.2% | 6/22 | 1 of 7 |
+| test (scored once, commit a1284f8) | bm25+gate+verifier | 52.2% | 30.4% | 2/11 | 5 of 7 |
+The parser fixes after the test run were not re-scored on test (see docs/assumptions.md). Dense, hybrid and rerank
+rows still skipped. Regression: the replica PPM dev split moved from 84% to 80% with the engine changes.
+Gates: `make check` 104 passed; tsc and eslint clean; Playwright 12 passed.
+
 ## Exit criteria status
 | Criterion | Status |
 |---|---|
 | Zero test/lint/build errors | Met for what exists (above). Docker build not run. |
 | Hallucination ≤ 2% on frozen test set | **Not met.** Sample test split: 1/13 answers (7.7%, 95% upper bound 33%). Needs a real corpus and ≥188 error-free answers to show 2%. |
-| Demo answers verified against source pages | **Met on the replica sample only**: 3 answers and 1 refusal compared with the PDF page images by the author; owner re-check pending (docs/viva_script.md). |
+| Demo answers verified against source pages | **Met on the ILPA template** (3 answers and 1 refusal compared with workbook cells by the author; cell references in docs/viva_script.md; owner re-check pending). Not on real fund documents. |
 | Refusal works on unsupported questions | Works on the sample: 6 of 7 unanswerable test questions refused, 1 missed ("legal advisors in Calderon"). Not shown on real disclosures. |
-| ≥300 MB of real data and indexes | **Not met.** `data/` holds only an empty `targets.json`. |
+| ≥300 MB of real data and indexes | **Not met.** One real 125 KB template (ILPA v2.0) plus the 524 KB replica PPM. |
 | README with setup, architecture, viva script | README and docs/viva_script.md written; the viva table is blank by design. |
 | docker compose fresh-clone run | **Not met.** No Docker daemon (B-D1). |
 

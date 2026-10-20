@@ -5,7 +5,8 @@ only governance text.
 
 ## Data provenance
 1. Only real, public documents. No fabricated fund data, no invented documents, no placeholder numbers.
-2. Every pull is logged in `sources.csv` (url, publisher, date_pulled, local_path, notes) and, once
+2. Every real source is logged in `sources.csv` (a file the owner uploads instead of a download is logged with the
+   URL not recorded, and in `data/real/manifest.json` with its SHA-256).  Every pull is logged in `sources.csv` (url, publisher, date_pulled, local_path, notes) and, once
    `data/manifest.json` exists, with its SHA-256.
 3. A pull that fails is logged in BLOCKERS.md with the URL and reason, not retried silently, and
    never replaced with substitute data.

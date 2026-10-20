@@ -35,6 +35,13 @@ Reachable: pypi.org, registry.npmjs.org (code dependencies only).
 | B-T3 | UI/UX Pro Max skill | Not available in this session. Design decisions made directly and checked with axe and screenshots. |
 | B-T4 | Google Fonts | Blocked; system font stack used instead of `next/font/google`. |
 
+## Partially resolved
+- The owner uploaded the official ILPA Reporting Template v2.0 (`data/real/`). It is the first genuine public document in
+  the corpus, but a template, not a fund report. Still missing: SEBI AIF disclosures, listed-firm filings, and the
+  ILPA Capital Call and DDQ templates (hosts blocked, B-N1 to B-N8), plus model weights (B-N9, B-N10).
+- The environment network setting was changed by the owner, but the running session still received HTTP 403 for every
+  host; a new session is likely needed for it to take effect.
+
 ## Consequences (network)
 - `data/` and `models/` do not exist; `sources.csv` has no rows (no real pull has succeeded).
 - Gold set (≥100 hand-labelled questions with source pages) cannot be written without real documents. Gold files must be written by a person reading the real pages; nothing here generates them.
