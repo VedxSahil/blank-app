@@ -12,22 +12,35 @@ RAG over real, public PE fund documents with citations, refusals and a verifier,
 | sec.gov, data.sec.gov, sebi.gov.in, ilpa.org, kkr.com, ir.kkr.com, blackstone.com, carlyle.com, apollo.com, bseindia.com, nseindia.com, s2.q4cdn.com | **Blocked.** Proxy CONNECT returns 403 (network policy). |
 | huggingface.co, cdn.jsdelivr.net, arxiv.org | **Blocked.** Same 403. |
 
+## Loop 1, 2026-10-20
+Searched for modules A1, A2, A7, A8, A9: all branches (content and filenames), filesystem, /mnt/*. None found.
+Retried each data host once: all HTTP 403. Details and IDs in BLOCKERS.md. `sources.csv` has no rows.
+
+Built and committed one component at a time; `make check` (ruff, ruff format, mypy --strict, pytest) after each:
+
+| Commit | Component | Tests after commit |
+|---|---|---|
+| skeleton | pyproject (py3.13), stubs for A1/A2/A7/A8/A9, BLOCKERS.md, sources.csv | 5 passed |
+| chunker | section-aware, page-exact chunk IDs, table rows kept whole | 12 passed |
+| bm25 | plain-Python Okapi BM25, hand-worked scores | 18 passed |
+| verifier | per-sentence citation, number, date, entity checks; `[calc:]` support | 33 passed |
+| gate | dev-calibrated threshold, key-fact check | 40 passed |
+| metrics | accuracy, citation P/R, refusal P/R, hallucination, Wilson bound | 46 passed |
+
+BM25 stopword filtering added after the integration test showed "what is the" matching unrelated text. Final: 49 passed.
+
+Defects found by probing and fixed: entity runs fused across possessives; citation after the full stop
+attached to the wrong sentence; a number supported by another number's context ("fee is 20%" vs "carry is 20%");
+spelled-out numbers unchecked; entity-only gold facts compared case-sensitively.
+
 ## Blockers (open)
-1. **B1: Phase 1 is impossible.** None of the document hosts are reachable, so no real PDFs can be downloaded. Per the hard rules, no stand-in data is created.
-2. **B2: No dense or rerank model weights.** bge/e5 and the cross-encoder come from huggingface.co, which is blocked. The dense, hybrid and rerank ablations cannot run until it is allowed.
-3. **B3: Modules A1, A2, A7, A8, A9 not supplied.** They will be reused as given, not reinvented.
-4. **B4: Existing repo is a Streamlit template.** It needs `requires-python >=3.14`, but this container has 3.13. The repo layout (`pyproject.toml`, `uv.lock`) will need adapting.
+See BLOCKERS.md (B-A1, B-A2, B-A7, B-A8, B-A9 modules; B-N1 to B-N10 network).
 
-## Next step (once B1 to B3 are cleared)
-Phase 1: `scripts/download.py` with a manifest (URL, date, SHA-256), then PyMuPDF parsing with page numbers preserved.
+## Not done (depends on blockers)
+Phase 1 data and manifest, dense and reranker retrieval, real chunking tests on PDFs, gold set, ablations,
+report drafter (needs A8 maths and real documents), FastAPI and Next.js app, Playwright demo, docker compose,
+viva script, ≥300 MB corpus. The hallucination exit criterion is unmet and, with 100 questions, cannot be shown
+at 2% (docs/assumptions.md).
 
-## Checklist
-- [ ] Phase 1 data (≥300 MB real content)
-- [ ] Phase 2 engine
-- [ ] Phase 3 evaluation (gold set ≥100 questions, frozen)
-- [ ] Phase 4 app
-- [ ] Phase 5 quality gates
-- [ ] Docs: README, viva script
-
-## Test results
-None yet. Nothing has been built or run.
+## Next step
+When network access and modules arrive: `scripts/download.py` with SHA-256 manifest, PyMuPDF parsing, then gold set.

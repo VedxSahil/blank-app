@@ -1,25 +1,24 @@
-# 🎈 Blank app template
+# PEReport: Fund Document Assistant (work in progress)
 
-A simple Streamlit app template for you to modify!
+Retrieval with citations, an answer verifier and a refusal gate for private-equity fund documents.
+Research question: how much of an LP's quarterly question set can be answered from fund documents
+automatically?
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
-
-### How to run it on your own machine
-
-Prerequisite: install `uv` if you don't already have it.
+**Status:** the core engine pieces exist and are unit-tested on invented fixture text. No real documents,
+models or gold set are in the repo yet. See `BLOCKERS.md`, `PROGRESS.md`, `docs/assumptions.md`,
+`docs/governance.md`.
 
 ```
-$ curl -LsSf https://astral.sh/uv/install.sh | sh
+pereport/chunker.py    section-aware chunks with doc, page, section, date, fund metadata
+pereport/bm25.py       Okapi BM25 (plain Python)
+pereport/verifier.py   every number, date and entity in a sentence must be in the cited chunk
+pereport/gate.py       refuse on missing evidence, low score (dev-calibrated) or unsupported facts
+pereport/metrics.py    accuracy, citation P/R, refusal P/R, hallucination rate with Wilson bound
+pereport/a*_*.py       stubs for the user's modules A1, A2, A7, A8, A9 (not supplied)
 ```
 
-1. Sync the dependencies
-
-   ```
-   $ uv sync
-   ```
-
-2. Run the app
-
-   ```
-   $ uv run streamlit run streamlit_app.py
-   ```
+## Run the checks
+```
+uv venv --python 3.13 .venv && uv pip install --python .venv/bin/python pytest ruff mypy
+make check      # ruff, ruff format, mypy --strict, pytest
+```
