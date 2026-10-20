@@ -1,7 +1,7 @@
 # Project governance (PEReport)
 
-This file governs this project. It is not module A7 (the user's governance note), which has not been
-supplied (BLOCKERS.md, B-A7). When A7 arrives, reconcile the two and keep A7 authoritative.
+This file governs this project. The user's earlier module A7 was skipped by instruction, so this is the
+only governance text.
 
 ## Data provenance
 1. Only real, public documents. No fabricated fund data, no invented documents, no placeholder numbers.

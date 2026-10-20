@@ -14,7 +14,6 @@ pereport/bm25.py       Okapi BM25 (plain Python)
 pereport/verifier.py   every number, date and entity in a sentence must be in the cited chunk
 pereport/gate.py       refuse on missing evidence, low score (dev-calibrated) or unsupported facts
 pereport/metrics.py    accuracy, citation P/R, refusal P/R, hallucination rate with Wilson bound
-pereport/a*_*.py       stubs for the user's modules A1, A2, A7, A8, A9 (not supplied)
 ```
 
 ## Run the checks

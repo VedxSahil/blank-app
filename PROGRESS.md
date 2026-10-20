@@ -34,11 +34,11 @@ attached to the wrong sentence; a number supported by another number's context (
 spelled-out numbers unchecked; entity-only gold facts compared case-sensitively.
 
 ## Blockers (open)
-See BLOCKERS.md (B-A1, B-A2, B-A7, B-A8, B-A9 modules; B-N1 to B-N10 network).
+Modules A1/A2/A7/A8/A9 skipped by user instruction (stubs removed). Network hosts B-N1 to B-N10 still HTTP 403 (rechecked in Loop 2).
 
 ## Not done (depends on blockers)
 Phase 1 data and manifest, dense and reranker retrieval, real chunking tests on PDFs, gold set, ablations,
-report drafter (needs A8 maths and real documents), FastAPI and Next.js app, Playwright demo, docker compose,
+report drafter (needs real documents), FastAPI and Next.js app, Playwright demo, docker compose,
 viva script, ≥300 MB corpus. The hallucination exit criterion is unmet and, with 100 questions, cannot be shown
 at 2% (docs/assumptions.md).
 

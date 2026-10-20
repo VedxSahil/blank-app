@@ -3,20 +3,12 @@
 Last audited: 2026-10-20. Each network host was tried once and returned HTTP 403 from the egress proxy
 (`CONNECT` refused: environment network policy). Not retried, per instruction.
 
-## Missing user modules
-Searched: current branch, all local and remote branches (content and filenames), whole filesystem,
-`/mnt/user-data`, `/mnt/attach`, `/mnt/skills`. Patterns: structured extraction, retrieval pipeline,
-governance note, fund administration, dashboard and commentary, A1/A2/A7/A8/A9. **No matches.**
-
-| ID | Module | Status | Stub |
-|---|---|---|---|
-| B-A1 | A1 structured extraction | not found | `pereport/a1_extraction.py` raises NotImplementedError |
-| B-A2 | A2 retrieval pipeline | not found | `pereport/a2_retrieval.py` raises NotImplementedError (BM25 baseline in `pereport/bm25.py` is new code, not A2) |
-| B-A7 | A7 governance note | not found | `pereport/a7_governance.py` raises NotImplementedError (`docs/governance.md` is project text, not A7) |
-| B-A8 | A8 fund administration engine | not found | `pereport/a8_fund_admin.py` raises NotImplementedError |
-| B-A9 | A9 dashboard and commentary | not found | `pereport/a9_dashboard.py` raises NotImplementedError |
-
-Needed from the user: the files or pasted text of each module. The legend of artifact codes alone is not content.
+## User modules A1, A2, A7, A8, A9
+**Skipped by the user's instruction (2026-10-20).** They were never found (searched all branches, the filesystem
+and /mnt). Their stubs were removed. Nothing in this project depends on them:
+- computed numbers use `pereport` code with hand-worked tests, not A8;
+- retrieval is `pereport.bm25` plus hybrid fusion, not A2;
+- `docs/governance.md` stands alone, with no A7 to reconcile against.
 
 ## Blocked network sources (HTTP 403, policy denial)
 | ID | URL tried | Needed for |
@@ -34,7 +26,7 @@ Needed from the user: the files or pasted text of each module. The legend of art
 
 Reachable: pypi.org, registry.npmjs.org (code dependencies only).
 
-## Consequences
+## Consequences (network)
 - `data/` and `models/` do not exist; `sources.csv` has no rows (no real pull has succeeded).
 - Gold set (≥100 hand-labelled questions with source pages) cannot be written without real documents.
 - Dense, hybrid and reranker ablations cannot run; only BM25 exists.
