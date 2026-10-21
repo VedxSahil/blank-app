@@ -78,11 +78,83 @@ def chunk_pages(pages: list[str], doc: str) -> list[dict]:
 
 def load_document(path: str, name: str | None = None) -> list[dict]:
     name = name or path.split("/")[-1]
+    if path.lower().endswith((".xlsx", ".xlsm")):
+        return load_xlsx(path, name)
     if path.lower().endswith(".pdf"):
         pages = pdf_pages(path)
     else:
         pages = open(path, encoding="utf8", errors="ignore").read().split("\f")
     return chunk_pages(pages, name)
+
+
+# ---------- Spreadsheet loader (ILPA Reporting Template and similar workbooks) ----------
+SEC_ROW = re.compile(r"^([A-Z](?:\.\d+)?)\.?\s+(.{4,})$")
+
+
+def _fmt(v):
+    import datetime as dt
+    if isinstance(v, (dt.datetime, dt.date)):
+        return v.strftime("%Y-%m-%d")
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return str(v).strip()
+    return f"{v:,.0f}" if float(v).is_integer() or abs(v) >= 1000 else f"{v:,.2f}"
+
+
+def _isnum(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def load_xlsx(path: str, doc: str) -> list[dict]:
+    """One chunk per data row. Numeric rows keep a `data` dict {(group, period): value} used for verified metrics."""
+    import openpyxl
+    wb = openpyxl.load_workbook(path, data_only=True)
+    chunks = []
+    for ws in wb.worksheets:
+        sec = ws.title
+        groups, periods = {}, {}
+        buf, bufloc = "", None
+
+        def flush(loc):
+            nonlocal buf, bufloc
+            if buf:
+                chunks.append({"doc": doc, "page": bufloc[1], "loc": f"{ws.title} row {bufloc[1]}", "section": sec, "text": buf}); buf = ""
+
+        for row in ws.iter_rows():
+            r = row[0].row
+            cells = {c.column_letter: c.value for c in row if c.value not in (None, "")}
+            if not cells:
+                continue
+            if ws.title == "Definitions" and "D" in cells and "C" in cells:
+                if "B" in cells: sec = f"Definitions: {str(cells['B']).strip()}"
+                chunks.append({"doc": doc, "page": r, "loc": f"Definitions row {r}", "section": sec,
+                               "text": f"Definition of {str(cells['C']).strip()}: {str(cells['D']).strip()}"})
+                continue
+            label = str(cells.get("B", "")).strip()
+            nums = {k: v for k, v in cells.items() if _isnum(v) and k not in ("A", "B")}
+            periods_here = {k: v for k, v in cells.items() if str(v) in ("QTD", "YTD", "ITD")}
+            if periods_here:
+                periods.update(periods_here)
+            strs = {k: str(v).strip() for k, v in cells.items() if isinstance(v, str) and k not in ("A", "B")}
+            if label and not nums and strs and not periods_here and any(k in strs for k in "EHK"):
+                groups = {k: v for k, v in strs.items() if k in "EHK"}          # group header row
+            if label and not nums and (m := SEC_ROW.match(label)) and (m.group(1).endswith(tuple("0123456789")) or len(m.group(1)) == 1) \
+                    and (not strs or groups):
+                sec = f"Section {m.group(1)}: {m.group(2)}"; continue
+            if nums and label:
+                data, parts = {}, []
+                for col, v in nums.items():
+                    gcol = "E" if col in "EFG" else "H" if col in "HIJ" else "K"
+                    g = groups.get(gcol, gcol); p = periods.get(col, col)
+                    data[(g, p)] = v; parts.append(f"{g} {p} {_fmt(v)}")
+                chunks.append({"doc": doc, "page": r, "loc": f"{ws.title} row {r}", "section": sec,
+                               "text": f"{label}: " + "; ".join(parts), "data": data, "label": label})
+            else:
+                line = " ".join(f"{_fmt(v)}" for k, v in cells.items())
+                if not buf: bufloc = (ws.title, r)
+                if len(buf) + len(line) > 900: flush(None); bufloc = (ws.title, r)
+                buf += (" | " if buf else "") + line
+        flush(None)
+    return chunks
 
 
 # ---------- Step 2: BM25 retrieval ----------
@@ -102,6 +174,8 @@ class Index:
         self.tf = [Counter(t) for t in self.T]
         self.prefix = {w[:5] for w in self.df}
         self.docs = sorted({c["doc"] for c in chunks})
+        self.df_doc = {d: Counter(w for t, c in zip(self.T, chunks) if c["doc"] == d for w in set(t)) for d in self.docs}
+        self.prefix_doc = {d: {w[:5] for w in self.df_doc[d]} for d in self.docs}
 
     def search(self, q: str, k: int = 5, only: str | None = None) -> list[dict]:
         qs = tok(q)
@@ -124,33 +198,44 @@ class Index:
         scored.sort(key=lambda x: -x[0])
         return [self.chunks[i] for _, i in scored[:k]]
 
-    def hits_for(self, q: str) -> list[dict]:
-        if len(self.docs) > 1:
-            return [h for d in self.docs for h in self.search(q, 3, d)]
-        return self.search(q, 5)
+    def hits_for(self, q: str, docs: list[str] | None = None) -> list[dict]:
+        docs = docs or self.docs
+        if len(docs) > 1:
+            return [h for d in docs for h in self.search(q, 5, d)]
+        return self.search(q, 5, docs[0] if len(self.docs) > 1 else None)
 
-    # ---------- Step 4: refusal rule ----------
+    # ---------- Step 4: refusal rule (applied per document) ----------
     def support(self, q: str) -> dict:
         if not self.chunks:
             return {"ok": False, "reason": "no document loaded"}
         qs = list(dict.fromkeys(w for w in tok(q) if len(w) >= 3 and w not in GENERIC))
         if not qs:
             return {"ok": False, "reason": "no searchable terms in the question"}
-        seen = lambda w: self.df.get(w) or (len(w) >= 5 and w[:5] in self.prefix)
-        unseen = [w for w in qs if not seen(w)]
-        if unseen:
-            return {"ok": False, "reason": "term(s) not found in the documents: " + ", ".join(unseen)}
-        hits = self.hits_for(q)
-        u = {w for h in hits for w in tok(h["text"])}
-        up = {w[:5] for w in u}
-        cov = sum(1 for w in qs if w in u or (len(w) >= 5 and w[:5] in up)) / len(qs)
-        if cov < 0.6:
-            return {"ok": False, "reason": f"retrieved passages cover only {round(cov*100)}% of the question terms"}
-        return {"ok": True, "hits": hits, "cov": cov}
+        best_reason, best_rank, ok_docs = "", 99, []
+        for d in self.docs:
+            seen = lambda w: self.df_doc[d].get(w) or (len(w) >= 5 and w[:5] in self.prefix_doc[d])
+            unseen = [w for w in qs if not seen(w)]
+            if unseen:
+                if len(unseen) < best_rank:
+                    best_rank, best_reason = len(unseen), "term(s) not found in the documents: " + ", ".join(unseen)
+                continue
+            hits = self.search(q, 5, d)
+            u = {w for h in hits for w in tok(h["text"])}
+            up = {w[:5] for w in u}
+            cov = sum(1 for w in qs if w in u or (len(w) >= 5 and w[:5] in up)) / len(qs)
+            if cov < 0.6:
+                if best_rank > 0.5:
+                    best_rank, best_reason = 0.5, f"retrieved passages cover only {round(cov*100)}% of the question terms"
+                continue
+            ok_docs.append(d)
+        if not ok_docs:
+            return {"ok": False, "reason": best_reason}
+        return {"ok": True, "hits": self.hits_for(q, ok_docs), "docs": ok_docs}
 
 
 def cite(c: dict) -> str:
-    return f"[Source: {c['doc']}, {c['section']}, p.{c['page']}]"
+    where = c["loc"] if c.get("loc") else f"p.{c['page']}"
+    return f"[Source: {c['doc']}, {c['section']}, {where}]"
 
 
 # ---------- Step 3: fee extraction and verified arithmetic ----------
@@ -189,21 +274,57 @@ def calc_fees(chunks: list[dict], doc: str, amount: float, growth: float) -> dic
 
 
 # ---------- Step 5: structured report ----------
-KPI_ROWS = ["Vintage", "Commitments (minimum investment)", "DPI", "RVPI", "Net IRR"]
+KPI_ROWS = ["Vintage", "Commitments", "DPI", "RVPI", "TVPI", "Net IRR"]
+
+
+def fund_metrics(chunks: list[dict]) -> dict:
+    """Compute paid-in based multiples from capital-account rows (LP allocation, inception-to-date). Verified arithmetic."""
+    def row(pattern):
+        for c in chunks:
+            if c.get("data") and re.search(pattern, c.get("label", ""), re.I):
+                for (g, p), v in c["data"].items():
+                    if "LP" in g.upper() and p == "ITD":
+                        return v, c
+        return None, None
+    out = {}
+    contrib, cc = row(r"^Contributions")
+    dist, dc = row(r"^Distributions")
+    nav, nc = row(r"^Ending NAV\s*.\s*Net")
+    commit, kc = row(r"^Total Commitment")
+    unf, uc = row(r"^Ending Unfunded")
+    if contrib and dist is not None and nav is not None:
+        out.update(paid_in=contrib, distributions=abs(dist), nav=nav, dpi=abs(dist) / contrib, rvpi=nav / contrib,
+                   tvpi=(abs(dist) + nav) / contrib, cites=[cite(cc), cite(dc), cite(nc)])
+    if commit:
+        out.update(commitment=commit, commit_cite=cite(kc))
+        if unf is not None: out.update(unfunded=unf)
+    for c in chunks:
+        if (m := re.search(r"Initial Closing:?\s*\|?\s*(\d{4})-\d\d-\d\d", c["text"])):
+            out.update(vintage=m.group(1), vintage_cite=cite(c)); break
+    return out
 
 
 def kpi_table(chunks: list[dict]) -> list[tuple[str, str]]:
+    fm = fund_metrics(chunks)
     pat = re.compile(r"minimum (?:initial )?(?:investment|subscription)[^.]{0,60}USD ?[\d,]+", re.I)
     rows = []
     for name in KPI_ROWS:
         val = MISSING
-        if name.startswith("Commitments"):
+        if name == "Vintage" and "vintage" in fm:
+            val = f"{fm['vintage']} (year of Initial Closing) {fm['vintage_cite']}"
+        elif name == "Commitments" and "commitment" in fm:
+            val = f"USD {fm['commitment']:,.0f} total commitment" + (f"; unfunded USD {fm['unfunded']:,.0f}" if "unfunded" in fm else "") + f" {fm['commit_cite']}"
+        elif name in ("DPI", "RVPI", "TVPI") and name.lower() in fm:
+            num = {"DPI": f"distributions {fm['distributions']:,.0f}", "RVPI": f"ending NAV {fm['nav']:,.0f}",
+                   "TVPI": "DPI + RVPI"}[name]
+            val = f"{fm[name.lower()]:.2f}x (computed: {num}" + (f" / paid-in {fm['paid_in']:,.0f}) " if name != "TVPI" else f"; paid-in {fm['paid_in']:,.0f}) ") + " ".join(fm["cites"])
+        elif name == "Commitments":
             for c in chunks:
                 if (m := pat.search(c["text"])):
                     val = f"{m.group(0)} {cite(c)}"; break
-        else:
-            key = {"Vintage": r"\bvintage\b", "DPI": r"\bDPI\b", "RVPI": r"\bRVPI\b", "Net IRR": r"\bnet IRR\b"}[name]
-            for c in chunks:  # a metric is reported only if the source states it with a number
+        elif name in ("Vintage", "DPI", "RVPI", "TVPI", "Net IRR"):
+            key = {"Vintage": r"\bvintage\b", "DPI": r"\bDPI\b", "RVPI": r"\bRVPI\b", "TVPI": r"\bTVPI\b", "Net IRR": r"\bnet IRR\b"}[name]
+            for c in chunks:  # reported only if the source states it with a number
                 if (m := re.search(key + r"[^.]{0,40}?(\d[\d.,]*\s?(?:x|%)?)", c["text"], re.I)):
                     val = f"{m.group(1)} {cite(c)}"; break
         rows.append((name, val))

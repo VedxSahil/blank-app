@@ -10,3 +10,8 @@ questions, fee arithmetic computed in code, a quarterly-style report draft and a
 * `report/` — project report sources
 
 Deploy publicly: share.streamlit.io → New app → this repo, branch `claude/stoic-edison-nxyb7y`, main file `streamlit_app.py`.
+
+## Data sources
+* `docs/sample/Aurelian_Peak_Fund_Sample_PPM.pdf` — fictional sample PPM.
+* `data/ILPA-Reporting-Template-v2.0.xlsx` — the ILPA Reporting Template v2.0 (example workbook, © ILPA, published for public use at ilpa.org). Loaded as rows with section, label and period (QTD/YTD/ITD) so questions about contributions, distributions, NAV, commitments and fees are answered with row-level citations; DPI, RVPI and TVPI are computed in code from the LP capital account.
+* `eval/gold_aurelian.json` (37 questions) and `eval/gold_ilpa.json` (28 questions) — validation sets.

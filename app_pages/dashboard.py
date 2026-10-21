@@ -38,6 +38,14 @@ with right:
     else:
         st.info("No question set found. Run one on the Validation page.")
 
+fm = E.fund_metrics(idx.chunks)
+if "dpi" in fm:
+    st.subheader("Fund metrics (computed from the capital account, LP allocation, inception to date)")
+    m = st.columns(6)
+    m[0].metric("Paid-in capital", f"{fm['paid_in']/1e6:,.1f}M"); m[1].metric("Distributions", f"{fm['distributions']/1e6:,.1f}M")
+    m[2].metric("Ending NAV", f"{fm['nav']/1e6:,.1f}M"); m[3].metric("DPI", f"{fm['dpi']:.2f}x")
+    m[4].metric("RVPI", f"{fm['rvpi']:.2f}x"); m[5].metric("TVPI", f"{fm['tvpi']:.2f}x")
+    st.caption("DPI = distributions / paid-in; RVPI = ending NAV (net of carry) / paid-in; TVPI = DPI + RVPI. Net IRR needs dated cash flows, which the template does not contain.")
 st.subheader("Quarterly-metric availability")
 rows = []
 for d in idx.docs:

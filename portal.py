@@ -5,7 +5,9 @@ import pe_engine as E
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SAMPLE = os.path.join(ROOT, "docs", "sample", "Aurelian_Peak_Fund_Sample_PPM.pdf")
+ILPA = os.path.join(ROOT, "data", "ILPA-Reporting-Template-v2.0.xlsx")
 GOLD = os.path.join(ROOT, "eval", "gold_aurelian.json")
+GOLD_ILPA = os.path.join(ROOT, "eval", "gold_ilpa.json")
 
 
 def require_index() -> E.Index:
@@ -23,8 +25,9 @@ def log_query(q: str, status: str, reason: str = "", hits=None):
 
 
 def run_validation(idx: E.Index, gold=None):
-    if gold is None:
-        gold = json.load(open(GOLD)) if os.path.exists(GOLD) else None
+    if gold is None:   # pick the bundled set that matches the loaded documents
+        path = GOLD_ILPA if all("ILPA" in d for d in idx.docs) else GOLD
+        gold = json.load(open(path)) if os.path.exists(path) else None
     if gold is None:
         return None
     r = E.evaluate(idx, gold)

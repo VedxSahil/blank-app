@@ -15,7 +15,7 @@ if st.button("Generate report", type="primary"):
         log_query(q, "refused", rep["reason"])
         st.warning(f"**Not supported by the documents.** {E.MISSING}  \nReason: {rep['reason']}.")
     elif mode.startswith("AI"):
-        hits = idx.hits_for(q)[:5]
+        hits = [h for d in idx.docs for h in [x for x in idx.hits_for(q) if x["doc"] == d][:3]]
         log_query(q, "answered (AI)", "", hits)
         if not key:
             st.error("Enter your Claude API key, or switch to the free report.")

@@ -1,0 +1,134 @@
+[
+ {
+  "q": "When was the initial closing of the fund?",
+  "answerable": true,
+  "expect": "2022-05-15"
+ },
+ {
+  "q": "What is the fund termination date?",
+  "answerable": true,
+  "expect": "2032-09-30"
+ },
+ {
+  "q": "When does the investment period end?",
+  "answerable": true,
+  "expect": "2027-09-30"
+ },
+ {
+  "q": "What is the inception date?",
+  "answerable": true,
+  "expect": "2022-02-23"
+ },
+ {
+  "q": "What is the period end date?",
+  "answerable": true,
+  "expect": "2026-06-30"
+ },
+ {
+  "q": "What is the total commitment of LP #5?",
+  "answerable": true,
+  "expect": "50,000,000"
+ },
+ {
+  "q": "What is the total fund commitment?",
+  "answerable": true,
+  "expect": "2,503,750,000"
+ },
+ {
+  "q": "What is the ending unfunded commitment for the LP?",
+  "answerable": true,
+  "expect": "18,500,000"
+ },
+ {
+  "q": "What are the contributions inception to date for the LP?",
+  "answerable": true,
+  "expect": "35,000,000"
+ },
+ {
+  "q": "What are the distributions inception to date?",
+  "answerable": true,
+  "expect": "19,000,000"
+ },
+ {
+  "q": "What is the ending NAV net of carried interest?",
+  "answerable": true,
+  "expect": "45,673,600"
+ },
+ {
+  "q": "What is the ending NAV gross of carried interest?",
+  "answerable": true,
+  "expect": "50,673,600"
+ },
+ {
+  "q": "What is the beginning NAV for the quarter?",
+  "answerable": true,
+  "expect": "45,067,000"
+ },
+ {
+  "q": "What are the placement fees inception to date?",
+  "answerable": true,
+  "expect": "40,000"
+ },
+ {
+  "q": "What are the management fees gross of offsets and rebates?",
+  "answerable": true,
+  "expect": "6,625,000"
+ },
+ {
+  "q": "What are the management fees net of offsets waivers and rebates?",
+  "answerable": true,
+  "expect": "5,061,479"
+ },
+ {
+  "q": "How is placement fees defined?",
+  "answerable": true,
+  "expect": "Fees/costs paid to the investment adviser"
+ },
+ {
+  "q": "What is a management fee rebate?",
+  "answerable": true,
+  "expect": "Refund of any prior management fees"
+ },
+ {
+  "q": "What are fee waivers?",
+  "answerable": true,
+  "expect": "waiver of management fees"
+ },
+ {
+  "q": "What is the total fund beginning NAV?",
+  "answerable": true,
+  "expect": "2,495,281,787"
+ },
+ {
+  "q": "What is the fund's net IRR?",
+  "answerable": false
+ },
+ {
+  "q": "What are the top 3 portfolio companies by valuation?",
+  "answerable": false
+ },
+ {
+  "q": "What is the fund's ESG rating?",
+  "answerable": false
+ },
+ {
+  "q": "What is the carried interest hurdle rate?",
+  "answerable": false
+ },
+ {
+  "q": "What is the MOIC of the fund?",
+  "answerable": false
+ },
+ {
+  "q": "What was the NAV per share in Q3 2027?",
+  "answerable": false
+ },
+ {
+  "q": "Who is the fund's custodian?",
+  "answerable": false
+ },
+ {
+  "q": "What is the fund's investment strategy?",
+  "answerable": false
+ }
+]
