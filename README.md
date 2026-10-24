@@ -1,26 +1,34 @@
 # Pre-Market Dashboard
 
 A one-page dashboard for the Indian stock market, refreshed every weekday morning.
+It needs no API key and no paid service.
 
 It shows GIFT Nifty, Nifty 50 and Sensex previous closes, India VIX, USD/INR, Brent crude,
 US markets overnight, FII and DII flows, an expected-open gap, eight headlines and a short
-morning brief. Numbers come from Claude with web search, so they can be wrong. Missing
-numbers show as "not found".
+morning brief. Anything that cannot be fetched shows as "not found". Nothing is guessed.
 
-For learning only. Not investment advice.
+For learning only. Not investment advice. Numbers can be wrong. Check them before you rely on them.
+
+## Where the data comes from
+
+- Yahoo Finance: Nifty 50, Sensex, India VIX, USD/INR, Brent, S&P 500, Nasdaq, Dow.
+- NSE India: GIFT Nifty and FII/DII net flows.
+- Google News RSS: headlines. Tone and the "helps or hurts" line come from simple keyword
+  rules, so they are rough.
 
 ## How it works
 
 - `.github/workflows/daily-update.yml` runs at 6:30 AM IST, Monday to Friday.
-- It runs `scripts/update_dashboard.py`, which sends `scripts/prompt_template.md` and the
-  current `index.html` to Claude, then checks the reply before saving it.
-- If the check fails, the old `index.html` stays and the run fails.
+- It runs `scripts/update_dashboard.py` (Python standard library only), which fetches the
+  data and fills `scripts/template.html` to write `index.html`.
+- A safety check runs before saving. If it fails (for example the sources are blocked), the
+  old `index.html` stays and the run fails.
 - If `index.html` changed, the workflow commits and pushes it. GitHub Pages serves it.
 
 ## Set up once
 
-1. Add a repository secret named `ANTHROPIC_API_KEY` (Settings > Secrets and variables > Actions).
-2. Turn on GitHub Pages (Settings > Pages): deploy from branch, folder `/ (root)`.
+Turn on GitHub Pages (Settings > Pages): deploy from branch, folder `/ (root)`.
+The workflow only runs on the default branch, so merge into it first.
 
 ## Run it by hand
 
@@ -29,7 +37,5 @@ On GitHub: Actions tab > "Daily dashboard update" > Run workflow.
 On your machine:
 
 ```
-pip install anthropic
-export ANTHROPIC_API_KEY=your-key
 python scripts/update_dashboard.py
 ```
