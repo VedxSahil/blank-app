@@ -1,25 +1,41 @@
-# 🎈 Blank app template
+# Pre-Market Dashboard
 
-A simple Streamlit app template for you to modify!
+A one-page dashboard for the Indian stock market, refreshed every weekday morning.
+It needs no API key and no paid service.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+It shows GIFT Nifty, Nifty 50 and Sensex previous closes, India VIX, USD/INR, Brent crude,
+US markets overnight, FII and DII flows, an expected-open gap, eight headlines and a short
+morning brief. Anything that cannot be fetched shows as "not found". Nothing is guessed.
 
-### How to run it on your own machine
+For learning only. Not investment advice. Numbers can be wrong. Check them before you rely on them.
 
-Prerequisite: install `uv` if you don't already have it.
+## Where the data comes from
+
+- Yahoo Finance: Nifty 50, Sensex, India VIX, USD/INR, Brent, S&P 500, Nasdaq, Dow.
+- NSE India: GIFT Nifty and FII/DII net flows.
+- Google News RSS: headlines. Tone and the "helps or hurts" line come from simple keyword
+  rules, so they are rough.
+
+## How it works
+
+- `.github/workflows/daily-update.yml` runs at 6:30 AM IST, Monday to Friday.
+- It runs `scripts/update_dashboard.py` (Python standard library only), which fetches the
+  data and fills `scripts/template.html` to write `index.html`.
+- A safety check runs before saving. If it fails (for example the sources are blocked), the
+  old `index.html` stays and the run fails.
+- If `index.html` changed, the workflow commits and pushes it. GitHub Pages serves it.
+
+## Set up once
+
+Turn on GitHub Pages (Settings > Pages): deploy from branch, folder `/ (root)`.
+The workflow only runs on the default branch, so merge into it first.
+
+## Run it by hand
+
+On GitHub: Actions tab > "Daily dashboard update" > Run workflow.
+
+On your machine:
 
 ```
-$ curl -LsSf https://astral.sh/uv/install.sh | sh
+python scripts/update_dashboard.py
 ```
-
-1. Sync the dependencies
-
-   ```
-   $ uv sync
-   ```
-
-2. Run the app
-
-   ```
-   $ uv run streamlit run streamlit_app.py
-   ```
