@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pre-Market Dashboard</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --card: #171c24;
+    --line: #262d38;
+    --text: #e6e9ee;
+    --muted: #8b95a5;
+    --pos: #3ecf8e;
+    --neg: #ff6b6b;
+    --neu: #e0b341;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 16px; }
+  header { padding: 8px 0 16px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+  h1 { margin: 0; font-size: 1.6rem; }
+  h2 { font-size: 1.1rem; margin: 24px 0 12px; }
+  .updated { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .tile, .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .value { font-size: 1.5rem; font-weight: 600; margin: 4px 0; }
+  .sub { color: var(--muted); font-size: 0.8rem; }
+  .row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.95rem; padding: 2px 0; }
+  .expected { border-color: var(--neu); }
+  .tone { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; border: 1px solid currentColor; }
+  .positive { color: var(--pos); }
+  .negative { color: var(--neg); }
+  .neutral { color: var(--neu); }
+  ol.headlines { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .headline-title { font-weight: 600; margin-bottom: 4px; }
+  .meta { color: var(--muted); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .impact { margin-top: 6px; font-size: 0.9rem; }
+  .brief p { margin: 0 0 10px; }
+  .brief p:last-child { margin-bottom: 0; }
+  footer { margin: 32px 0 16px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Pre-Market Dashboard</h1>
+  <div class="updated">Last updated: <span id="last-updated">Placeholder (not yet updated) IST</span></div>
+</header>
+
+<section aria-label="Key numbers">
+  <div class="grid">
+    <div class="tile">
+      <div class="label">GIFT Nifty</div>
+      <div class="value">not found</div>
+      <div class="sub">Source: placeholder · Published: not found</div>
+    </div>
+    <div class="tile">
+      <div class="label">Nifty 50 previous close</div>
+      <div class="value">not found</div>
+      <div class="sub">Source: placeholder · Published: not found</div>
+    </div>
+    <div class="tile">
+      <div class="label">Sensex previous close</div>
+      <div class="value">not found</div>
+      <div class="sub">Source: placeholder · Published: not found</div>
+    </div>
+    <div class="tile">
+      <div class="label">India VIX</div>
+      <div class="value">not found</div>
+      <div class="sub">Source: placeholder · Published: not found</div>
+    </div>
+    <div class="tile">
+      <div class="label">USD/INR</div>
+      <div class="value">not found</div>
+      <div class="sub">Source: placeholder · Published: not found</div>
+    </div>
+    <div class="tile">
+      <div class="label">Brent crude</div>
+      <div class="value">not found</div>
+      <div class="sub">Source: placeholder · Published: not found</div>
+    </div>
+    <div class="tile">
+      <div class="label">US markets overnight</div>
+      <div class="row"><span>S&amp;P 500</span><span>not found</span></div>
+      <div class="row"><span>Nasdaq</span><span>not found</span></div>
+      <div class="row"><span>Dow</span><span>not found</span></div>
+      <div class="sub">Source: placeholder · Published: not found</div>
+    </div>
+    <div class="tile">
+      <div class="label">FII and DII net flows (previous session)</div>
+      <div class="row"><span>FII net</span><span>not found</span></div>
+      <div class="row"><span>DII net</span><span>not found</span></div>
+      <div class="sub">Source: placeholder · Published: not found</div>
+    </div>
+    <div class="tile expected">
+      <div class="label">Expected open</div>
+      <div class="value">not found</div>
+      <div class="sub"><span class="tone neutral">flat</span> GIFT Nifty minus Nifty previous close, in points. Needs both numbers.</div>
+    </div>
+  </div>
+</section>
+
+<section aria-label="Top headlines">
+  <h2>Top headlines</h2>
+  <ol class="headlines">
+    <li class="card">
+      <div class="headline-title">Placeholder headline 1</div>
+      <div class="meta"><span>Source: placeholder</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: not found.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Placeholder headline 2</div>
+      <div class="meta"><span>Source: placeholder</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: not found.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Placeholder headline 3</div>
+      <div class="meta"><span>Source: placeholder</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: not found.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Placeholder headline 4</div>
+      <div class="meta"><span>Source: placeholder</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: not found.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Placeholder headline 5</div>
+      <div class="meta"><span>Source: placeholder</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: not found.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Placeholder headline 6</div>
+      <div class="meta"><span>Source: placeholder</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: not found.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Placeholder headline 7</div>
+      <div class="meta"><span>Source: placeholder</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: not found.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Placeholder headline 8</div>
+      <div class="meta"><span>Source: placeholder</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: not found.</div>
+    </li>
+  </ol>
+</section>
+
+<section aria-label="Morning brief">
+  <h2>Morning brief</h2>
+  <div class="card brief">
+    <p>This is a placeholder morning brief.</p>
+    <p>The first automated run will replace it with a summary of the day's numbers.</p>
+    <p>Every figure in the brief will also appear in the tiles above.</p>
+    <p>Anything that cannot be found will be shown as not found.</p>
+    <p>Check every number against its source before you rely on it.</p>
+  </div>
+</section>
+
+<footer>
+  For learning only. Not investment advice. Numbers come from web search and can be wrong. Check them before you rely on them.
+</footer>
+
+</div>
+</body>
+</html>

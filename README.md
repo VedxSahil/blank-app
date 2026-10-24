@@ -1,25 +1,35 @@
-# 🎈 Blank app template
+# Pre-Market Dashboard
 
-A simple Streamlit app template for you to modify!
+A one-page dashboard for the Indian stock market, refreshed every weekday morning.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+It shows GIFT Nifty, Nifty 50 and Sensex previous closes, India VIX, USD/INR, Brent crude,
+US markets overnight, FII and DII flows, an expected-open gap, eight headlines and a short
+morning brief. Numbers come from Claude with web search, so they can be wrong. Missing
+numbers show as "not found".
 
-### How to run it on your own machine
+For learning only. Not investment advice.
 
-Prerequisite: install `uv` if you don't already have it.
+## How it works
+
+- `.github/workflows/daily-update.yml` runs at 6:30 AM IST, Monday to Friday.
+- It runs `scripts/update_dashboard.py`, which sends `scripts/prompt_template.md` and the
+  current `index.html` to Claude, then checks the reply before saving it.
+- If the check fails, the old `index.html` stays and the run fails.
+- If `index.html` changed, the workflow commits and pushes it. GitHub Pages serves it.
+
+## Set up once
+
+1. Add a repository secret named `ANTHROPIC_API_KEY` (Settings > Secrets and variables > Actions).
+2. Turn on GitHub Pages (Settings > Pages): deploy from branch, folder `/ (root)`.
+
+## Run it by hand
+
+On GitHub: Actions tab > "Daily dashboard update" > Run workflow.
+
+On your machine:
 
 ```
-$ curl -LsSf https://astral.sh/uv/install.sh | sh
+pip install anthropic
+export ANTHROPIC_API_KEY=your-key
+python scripts/update_dashboard.py
 ```
-
-1. Sync the dependencies
-
-   ```
-   $ uv sync
-   ```
-
-2. Run the app
-
-   ```
-   $ uv run streamlit run streamlit_app.py
-   ```
