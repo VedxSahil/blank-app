@@ -13,7 +13,7 @@ import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time as dtime, timedelta, timezone
 from http.cookiejar import CookieJar
 from pathlib import Path
 from string import Template
@@ -21,10 +21,15 @@ from string import Template
 ROOT = Path(__file__).resolve().parent.parent
 INDEX = ROOT / "index.html"
 TEMPLATE = ROOT / "scripts" / "template.html"
+HISTORY = ROOT / "history.json"
 IST = timezone(timedelta(hours=5, minutes=30))
 UA = "Mozilla/5.0"
 NF = "not found"
 FLAT_BAND_PCT = 0.1  # within +/-0.1% of the Nifty close counts as flat
+SPARK_DAYS = 22  # about one month of trading days
+HISTORY_KEEP = 60
+HISTORY_SHOWN = 10
+PRE_OPEN = dtime(9, 15)  # only runs before this time (IST) are recorded as predictions
 
 NEWS_QUERY = "Sensex Nifty stock market India when:1d"
 POSITIVE = ("rally", "rallies", "surge", "surges", "gain", "gains", "jump", "jumps", "rise",
@@ -73,35 +78,48 @@ def fetch(url, headers=None, retries=2):
     return None
 
 
+_BARS_CACHE = {}
+
+
 def yahoo_bars(symbol):
-    """Return (meta, [(date_in_exchange_tz, close), ...]) or (None, [])."""
+    """Return (meta, [(date_in_exchange_tz, close, open), ...]) or (None, [])."""
+    if symbol in _BARS_CACHE:
+        return _BARS_CACHE[symbol]
     url = ("https://query1.finance.yahoo.com/v8/finance/chart/"
            + urllib.parse.quote(symbol) + "?range=1mo&interval=1d")
     time.sleep(1)  # be gentle with Yahoo
     raw = fetch(url)
-    if not raw:
-        return None, []
-    try:
-        result = json.loads(raw)["chart"]["result"][0]
-        meta = result["meta"]
-        tz = timezone(timedelta(seconds=meta.get("gmtoffset", 0)))
-        closes = result["indicators"]["quote"][0]["close"]
-        bars = [(datetime.fromtimestamp(t, tz).date(), c)
-                for t, c in zip(result["timestamp"], closes) if c is not None]
-        return meta, bars
-    except (KeyError, IndexError, TypeError, ValueError) as exc:
-        print(f"  bad Yahoo data for {symbol}: {exc}", file=sys.stderr)
-        return None, []
+    out = (None, [])
+    if raw:
+        try:
+            result = json.loads(raw)["chart"]["result"][0]
+            meta = result["meta"]
+            tz = timezone(timedelta(seconds=meta.get("gmtoffset", 0)))
+            quote = result["indicators"]["quote"][0]
+            bars = [(datetime.fromtimestamp(t, tz).date(), c, o)
+                    for t, c, o in zip(result["timestamp"], quote["close"], quote["open"])
+                    if c is not None]
+            out = (meta, bars)
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            print(f"  bad Yahoo data for {symbol}: {exc}", file=sys.stderr)
+    _BARS_CACHE[symbol] = out
+    return out
+
+
+def pct_change(last, prev):
+    return (last - prev) / prev * 100 if prev else None
 
 
 def prev_close(symbol, today):
-    """Last completed daily close before today (IST date)."""
-    meta, bars = yahoo_bars(symbol)
+    """Last completed daily close before today (IST date), with change and trend."""
+    _, bars = yahoo_bars(symbol)
     bars = [b for b in bars if b[0] < today]
     if not bars:
         return None
-    d, c = bars[-1]
-    return {"value": c, "when": f"close of {d:%d %b %Y}", "source": "Yahoo Finance"}
+    d, c, _ = bars[-1]
+    return {"value": c, "pct": pct_change(c, bars[-2][1]) if len(bars) > 1 else None,
+            "spark": [b[1] for b in bars[-SPARK_DAYS:]],
+            "when": f"close of {d:%d %b %Y}", "source": "Yahoo Finance"}
 
 
 def last_move(symbol, today):
@@ -109,18 +127,24 @@ def last_move(symbol, today):
     _, bars = yahoo_bars(symbol)
     if len(bars) < 2:
         return None
-    (_, prev), (d, last) = bars[-2], bars[-1]
-    return {"value": last, "pct": (last - prev) / prev * 100,
+    (_, prev, _), (d, last, _) = bars[-2], bars[-1]
+    return {"value": last, "pct": pct_change(last, prev),
+            "spark": [b[1] for b in bars[-SPARK_DAYS:]],
             "when": f"close of {d:%d %b %Y}", "source": "Yahoo Finance"}
 
 
 def latest_price(symbol):
-    meta, _ = yahoo_bars(symbol)
+    meta, bars = yahoo_bars(symbol)
     if not meta or meta.get("regularMarketPrice") is None:
         return None
+    price = meta["regularMarketPrice"]
     ts = datetime.fromtimestamp(meta["regularMarketTime"], IST)
-    return {"value": meta["regularMarketPrice"], "when": f"{ts:%d %b %Y, %H:%M} IST",
-            "source": "Yahoo Finance"}
+    tz = timezone(timedelta(seconds=meta.get("gmtoffset", 0)))
+    quote_day = datetime.fromtimestamp(meta["regularMarketTime"], tz).date()
+    before = [b[1] for b in bars if b[0] < quote_day]
+    return {"value": price, "pct": pct_change(price, before[-1]) if before else None,
+            "spark": (before + [price])[-SPARK_DAYS:],
+            "when": f"{ts:%d %b %Y, %H:%M} IST", "source": "Yahoo Finance"}
 
 
 def nse_get(path):
@@ -220,17 +244,116 @@ def meta_line(d):
     return f"Source: {esc(d['source'])} · Published: {esc(d['when'])}"
 
 
-def tile(label, d, text, extra=""):
+def direction(pct, mode="normal"):
+    """CSS class for a move. mode: normal (up is green), invert (up is red), neutral (no judgement)."""
+    if pct is None or abs(pct) < 0.005:
+        return "flat"
+    up = pct > 0
+    if mode == "neutral":
+        return "move-up" if up else "move-down"
+    if mode == "invert":
+        up = not up
+    return "up" if up else "down"
+
+
+def chg(pct, mode="normal"):
+    if pct is None:
+        return ""
+    arrow = "▲" if pct > 0 else "▼" if pct < 0 else "■"
+    return f'<span class="chg {direction(pct, mode)}">{arrow} {esc(signed(pct))}%</span>'
+
+
+def spark(values, mode="normal"):
+    """Inline SVG trend line for the last month."""
+    if not values or len(values) < 2:
+        return ""
+    w, h, pad = 120, 32, 3
+    lo, hi = min(values), max(values)
+    span = (hi - lo) or 1
+    pts = [(pad + i * (w - 2 * pad) / (len(values) - 1), h - pad - (v - lo) / span * (h - 2 * pad))
+           for i, v in enumerate(values)]
+    line = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    area = f"{pad},{h - pad} {line} {w - pad},{h - pad}"
+    cls = direction(pct_change(values[-1], values[0]), mode)
+    ex, ey = pts[-1]
+    label = f"Trend over {len(values)} trading days, from {num(values[0])} to {num(values[-1])}"
+    return (f'      <svg class="spark {cls}" viewBox="0 0 {w} {h}" role="img" aria-label="{esc(label)}">'
+            f'<polygon points="{area}" fill="currentColor" opacity="0.15"/>'
+            f'<polyline points="{line}" fill="none" stroke="currentColor" stroke-width="1.6" '
+            f'stroke-linejoin="round" stroke-linecap="round"/>'
+            f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="2.4" fill="currentColor"/></svg>\n')
+
+
+def tile(label, d, text, mode="normal", with_chg=True):
+    change = chg(d.get("pct"), mode) if d and with_chg else ""
     return (f'    <div class="tile">\n      <div class="label">{esc(label)}</div>\n'
-            f'      <div class="value">{esc(text if d else NF)}</div>\n{extra}'
+            f'      <div class="value">{esc(text if d else NF)} {change}</div>\n'
+            f'{spark(d["spark"], mode) if d and d.get("spark") else ""}'
             f'      <div class="sub">{meta_line(d)}</div>\n    </div>')
 
 
 def rows_tile(label, d, rows):
-    body = "".join(f'      <div class="row"><span>{esc(n)}</span><span>{esc(v if d else NF)}</span></div>\n'
+    """rows are (name, already-escaped html)."""
+    body = "".join(f'      <div class="row"><span>{esc(n)}</span><span>{v if d else NF}</span></div>\n'
                    for n, v in rows)
     return (f'    <div class="tile">\n      <div class="label">{esc(label)}</div>\n{body}'
             f'      <div class="sub">{meta_line(d)}</div>\n    </div>')
+
+
+# ---------------------------------------------------------------- history
+
+def load_history():
+    try:
+        return json.loads(HISTORY.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def update_history(history, now, today, gift, nifty):
+    """Fill in actual opens for past days, then record today's prediction (pre-open runs only)."""
+    _, bars = yahoo_bars("^NSEI")
+    opens = {b[0].isoformat(): b[2] for b in bars if b[2] is not None}
+    for day, entry in history.items():
+        if day < today.isoformat() and "actual_open" not in entry and day in opens:
+            entry["actual_open"] = opens[day]
+            entry["actual_gap"] = opens[day] - entry["nifty_prev"]
+    if today.weekday() < 5 and now.time() < PRE_OPEN and gift and nifty:
+        gap = gift["value"] - nifty["value"]
+        history[today.isoformat()] = {
+            "gift": gift["value"], "nifty_prev": nifty["value"], "pred_gap": gap,
+            "label": "flat" if abs(gap / nifty["value"] * 100) <= FLAT_BAND_PCT
+            else "gap-up" if gap > 0 else "gap-down"}
+    for day in sorted(history)[:-HISTORY_KEEP]:
+        del history[day]
+    return history
+
+
+def history_html(history):
+    days = sorted(history, reverse=True)[:HISTORY_SHOWN]
+    if not days:
+        return ('    <p class="sub">No days recorded yet. A day is recorded when the page is built '
+                'on a weekday before 9:15 AM IST, and its actual open is filled in the next run.</p>')
+    rows, done, hits = [], 0, 0
+    for day in days:
+        e = history[day]
+        if "actual_gap" in e:
+            match = (e["pred_gap"] > 0) == (e["actual_gap"] > 0)
+            done += 1
+            hits += match
+            actual = esc(signed(e["actual_gap"]))
+            verdict = '<span class="chg up">same direction</span>' if match else '<span class="chg down">opposite</span>'
+        else:
+            actual, verdict = "pending", ""
+        rows.append(f'      <tr><td>{esc(datetime.fromisoformat(day).strftime('%d %b %Y'))}</td>'
+                    f'<td>{esc(signed(e["pred_gap"]))} <span class="sub">{esc(e["label"])}</span></td>'
+                    f'<td>{actual}</td><td>{verdict}</td></tr>')
+    summary = (f"Predicted direction matched the actual open on {hits} of {done} completed days shown."
+               if done else "No completed days yet.")
+    return (f'    <p class="sub">{summary} Points versus the Nifty previous close. '
+            'Actual open comes from the Yahoo daily bar.</p>\n'
+            '    <div class="table-wrap"><table>\n'
+            '      <thead><tr><th>Date</th><th>GIFT-implied gap</th><th>Actual gap</th><th>Result</th></tr></thead>\n'
+            '      <tbody>\n' + "\n".join(rows) + '\n      </tbody>\n    </table></div>')
 
 
 def build(today):
@@ -265,18 +388,21 @@ def build(today):
             '      <div class="sub">Needs both GIFT Nifty and the Nifty previous close.</div>\n    </div>')
 
     us_found = any(us.values())
-    us_rows = [(n, f"{num(d['value'])} ({signed(d['pct'])}%)" if d else NF) for n, d in us.items()]
+    us_rows = [(n, f"{esc(num(d['value']))} {chg(d['pct'])}" if d else NF) for n, d in us.items()]
     us_meta = next((d for d in us.values() if d), None)
-    flow_rows = [("FII net (₹ crore)", signed(flows["fii"]) if flows else NF),
-                 ("DII net (₹ crore)", signed(flows["dii"]) if flows else NF)]
+    def flow(v):
+        return f'<span class="chg {direction(v)}">{esc(signed(v))}</span>'
+
+    flow_rows = [("FII net (₹ crore)", flow(flows["fii"]) if flows else NF),
+                 ("DII net (₹ crore)", flow(flows["dii"]) if flows else NF)]
 
     tiles = "\n".join([
         tile("GIFT Nifty", gift, num(gift["value"]) if gift else ""),
         tile("Nifty 50 previous close", nifty, num(nifty["value"]) if nifty else ""),
         tile("Sensex previous close", sensex, num(sensex["value"]) if sensex else ""),
-        tile("India VIX", vix, num(vix["value"]) if vix else ""),
-        tile("USD/INR", usdinr, num(usdinr["value"], 4) if usdinr else ""),
-        tile("Brent crude (USD)", brent, num(brent["value"]) if brent else ""),
+        tile("India VIX", vix, num(vix["value"]) if vix else "", mode="invert"),
+        tile("USD/INR", usdinr, num(usdinr["value"], 4) if usdinr else "", mode="neutral"),
+        tile("Brent crude (USD)", brent, num(brent["value"]) if brent else "", mode="neutral"),
         rows_tile("US markets overnight", us_meta if us_found else None, us_rows),
         rows_tile("FII and DII net flows (previous session)", flows, flow_rows),
         exp_html,
@@ -313,11 +439,15 @@ def build(today):
           if flows else "FII and DII flows for the previous session were not found.")
     brief = "\n".join(f"    <p>{esc(s)}</p>" for s in (s1, s2, s3, s4, s5))
 
+    now = datetime.now(IST)
+    history = update_history(load_history(), now, today, gift, nifty)
+
     found = sum(x is not None for x in (gift, nifty, sensex, vix, usdinr, brent, flows)) + int(us_found)
-    updated = datetime.now(IST).strftime("%d %b %Y, %H:%M") + " IST"
+    updated = now.strftime("%d %b %Y, %H:%M") + " IST"
     page = Template(TEMPLATE.read_text(encoding="utf-8")).substitute(
-        updated=esc(updated), tiles=tiles, headlines=headlines_html, brief=brief)
-    return page, found
+        updated=esc(updated), tiles=tiles, headlines=headlines_html, brief=brief,
+        history=history_html(history))
+    return page, found, history
 
 
 def check(page, found):
@@ -337,7 +467,7 @@ def check(page, found):
 
 
 def main():
-    page, found = build(datetime.now(IST).date())
+    page, found, history = build(datetime.now(IST).date())
     problems = check(page, found)
     if problems:
         print("Safety check failed. Keeping the old index.html.", file=sys.stderr)
@@ -345,6 +475,7 @@ def main():
             print(f"  - {p}", file=sys.stderr)
         sys.exit(1)
     INDEX.write_text(page, encoding="utf-8")
+    HISTORY.write_text(json.dumps(history, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     print(f"index.html updated ({found} of 8 data groups found).")
 
 
