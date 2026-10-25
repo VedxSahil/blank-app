@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pre-Market Dashboard</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --card: #171c24;
+    --line: #262d38;
+    --text: #e6e9ee;
+    --muted: #8b95a5;
+    --pos: #3ecf8e;
+    --neg: #ff6b6b;
+    --neu: #e0b341;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 16px; }
+  header { padding: 8px 0 16px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+  h1 { margin: 0; font-size: 1.6rem; }
+  h2 { font-size: 1.1rem; margin: 24px 0 12px; }
+  .updated { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .tile, .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .value { font-size: 1.5rem; font-weight: 600; margin: 4px 0; }
+  .sub { color: var(--muted); font-size: 0.8rem; }
+  .row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.95rem; padding: 2px 0; }
+  .expected { border-color: var(--neu); }
+  .tone { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; border: 1px solid currentColor; }
+  .positive { color: var(--pos); }
+  .negative { color: var(--neg); }
+  .neutral { color: var(--neu); }
+  ol.headlines { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .headline-title { font-weight: 600; margin-bottom: 4px; }
+  .meta { color: var(--muted); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .impact { margin-top: 6px; font-size: 0.9rem; }
+  .brief p { margin: 0 0 10px; }
+  .brief p:last-child { margin-bottom: 0; }
+  footer { margin: 32px 0 16px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Pre-Market Dashboard</h1>
+  <div class="updated">Last updated: <span id="last-updated">24 Oct 2026, 14:58 IST</span></div>
+</header>
+
+<section aria-label="Key numbers">
+  <div class="grid">
+    <div class="tile">
+      <div class="label">GIFT Nifty</div>
+      <div class="value">22,535.50</div>
+      <div class="sub">Source: NSE India · Published: NSE timestamp 24-Oct-2026 02:29</div>
+    </div>
+    <div class="tile">
+      <div class="label">Nifty 50 previous close</div>
+      <div class="value">22,600.00</div>
+      <div class="sub">Source: Yahoo Finance · Published: close of 23 Oct 2026</div>
+    </div>
+    <div class="tile">
+      <div class="label">Sensex previous close</div>
+      <div class="value">73,123.83</div>
+      <div class="sub">Source: Yahoo Finance · Published: close of 23 Oct 2026</div>
+    </div>
+    <div class="tile">
+      <div class="label">India VIX</div>
+      <div class="value">16.86</div>
+      <div class="sub">Source: Yahoo Finance · Published: close of 23 Oct 2026</div>
+    </div>
+    <div class="tile">
+      <div class="label">USD/INR</div>
+      <div class="value">94.9400</div>
+      <div class="sub">Source: Yahoo Finance · Published: 24 Oct 2026, 09:00 IST</div>
+    </div>
+    <div class="tile">
+      <div class="label">Brent crude (USD)</div>
+      <div class="value">111.70</div>
+      <div class="sub">Source: Yahoo Finance · Published: 24 Oct 2026, 02:29 IST</div>
+    </div>
+    <div class="tile">
+      <div class="label">US markets overnight</div>
+      <div class="row"><span>S&amp;P 500</span><span>7,623.68 (-0.52%)</span></div>
+      <div class="row"><span>Nasdaq</span><span>25,955.34 (-0.21%)</span></div>
+      <div class="row"><span>Dow</span><span>52,215.16 (-1.23%)</span></div>
+      <div class="sub">Source: Yahoo Finance · Published: close of 23 Oct 2026</div>
+    </div>
+    <div class="tile">
+      <div class="label">FII and DII net flows (previous session)</div>
+      <div class="row"><span>FII net (₹ crore)</span><span>+887.65</span></div>
+      <div class="row"><span>DII net (₹ crore)</span><span>+3,235.36</span></div>
+      <div class="sub">Source: NSE India · Published: session of 23-Oct-2026</div>
+    </div>
+    <div class="tile expected">
+      <div class="label">Expected open</div>
+      <div class="value">-64.50 pts</div>
+      <div class="sub"><span class="tone negative">gap-down</span> GIFT Nifty 22,535.50 minus Nifty previous close 22,600.00 (-0.29%). Flat means within ±0.1%.</div>
+    </div>
+  </div>
+</section>
+
+<section aria-label="Top headlines">
+  <h2>Top headlines</h2>
+  <ol class="headlines">
+    <li class="card">
+      <div class="headline-title">Indian equities extend losses as Brent crude hits six-month high</div>
+      <div class="meta"><span>Source: DD India</span><span>Sat, 24 Oct 2026 06:12:00 GMT</span><span class="tone negative">negative</span></div>
+      <div class="impact">Who it helps or hurts: Oil moves matter most to importers, airlines and paint makers on one side and oil producers on the other.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Closing Bell: Market snaps 2-week gains; Nifty at 22,600, Sensex down 125 pts</div>
+      <div class="meta"><span>Source: IndiaIPO</span><span>Sat, 24 Oct 2026 05:23:10 GMT</span><span class="tone positive">positive</span></div>
+      <div class="impact">Who it helps or hurts: The headline alone does not say who is helped or hurt.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Sensex, Nifty Fall for Third Straight Session as Oil Prices Rise</div>
+      <div class="meta"><span>Source: INDIA New England News</span><span>Sat, 24 Oct 2026 05:16:26 GMT</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: Oil moves matter most to importers, airlines and paint makers on one side and oil producers on the other.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Market weekly wrap: SENSEX, NIFTY50 snap winning streak, fall 2% as crude oil prices hit $117/bbl; Adani Ent top loser</div>
+      <div class="meta"><span>Source: Upstox</span><span>Sat, 24 Oct 2026 05:06:13 GMT</span><span class="tone negative">negative</span></div>
+      <div class="impact">Who it helps or hurts: Oil moves matter most to importers, airlines and paint makers on one side and oil producers on the other.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Jio IPO GMP today: Grey market signals over 22% listing gains; check allotment, listing date</div>
+      <div class="meta"><span>Source: The Economic Times</span><span>Sat, 24 Oct 2026 06:12:41 GMT</span><span class="tone positive">positive</span></div>
+      <div class="impact">Who it helps or hurts: IPO news matters most to the company, its bankers and people applying.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Why Did Indian Equities Extend Losses This Week? Analysts Explain</div>
+      <div class="meta"><span>Source: ETV Bharat</span><span>Sat, 24 Oct 2026 04:24:10 GMT</span><span class="tone negative">negative</span></div>
+      <div class="impact">Who it helps or hurts: The headline alone does not say who is helped or hurt.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Stock Market Crash: Sensex, Nifty Hit 1-Year Low; How US-Israel-Iran War Wiped Out Rs 4,753,333 Crore</div>
+      <div class="meta"><span>Source: Goodreturns</span><span>Fri, 23 Oct 2026 19:19:53 GMT</span><span class="tone negative">negative</span></div>
+      <div class="impact">Who it helps or hurts: The headline alone does not say who is helped or hurt.</div>
+    </li>
+    <li class="card">
+      <div class="headline-title">Festive cheer eludes Street amid oil shock</div>
+      <div class="meta"><span>Source: The New Indian Express</span><span>Sat, 24 Oct 2026 01:56:32 GMT</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: Oil moves matter most to importers, airlines and paint makers on one side and oil producers on the other.</div>
+    </li>
+  </ol>
+  <p class="sub">Tone and the "helps or hurts" line are picked by simple keyword rules, not read by a person. Treat them as rough.</p>
+</section>
+
+<section aria-label="Morning brief">
+  <h2>Morning brief</h2>
+  <div class="card brief">
+    <p>GIFT Nifty is at 22,535.50 against a Nifty 50 previous close of 22,600.00, an expected open of -64.50 points (gap-down).</p>
+    <p>Sensex closed at 73,123.83. India VIX closed at 16.86.</p>
+    <p>Overnight in the US, the S&amp;P 500 moved -0.52%, the Nasdaq moved -0.21%, the Dow moved -1.23%.</p>
+    <p>USD/INR is at 94.9400 and Brent crude is at 111.70 dollars.</p>
+    <p>In the previous session FIIs were net buyers (+887.65 crore rupees) and DIIs were net buyers (+3,235.36 crore rupees).</p>
+  </div>
+</section>
+
+<footer>
+  For learning only. Not investment advice. Numbers come from web search and can be wrong. Check them before you rely on them.
+</footer>
+
+</div>
+</body>
+</html>
