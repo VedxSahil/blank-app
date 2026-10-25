@@ -49,6 +49,15 @@
   .impact { margin-top: 6px; font-size: 0.9rem; }
   .brief p { margin: 0 0 10px; }
   .brief p:last-child { margin-bottom: 0; }
+  .chg { font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+  .up { color: var(--pos); }
+  .down { color: var(--neg); }
+  .move-up, .move-down, .flat { color: var(--neu); }
+  .spark { display: block; width: 100%; max-width: 160px; height: 36px; margin: 2px 0 4px; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; font-size: 0.8rem; }
   footer { margin: 32px 0 16px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
@@ -78,6 +87,13 @@ $headlines
   <h2>Morning brief</h2>
   <div class="card brief">
 $brief
+  </div>
+</section>
+
+<section aria-label="Expected open history">
+  <h2>Expected open: how it played out</h2>
+  <div class="card">
+$history
   </div>
 </section>
 
