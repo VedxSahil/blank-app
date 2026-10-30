@@ -14,6 +14,11 @@
     --pos: #3ecf8e;
     --neg: #ff6b6b;
     --neu: #e0b341;
+    --s1: #5aa9ff;
+    --s2: #ffb347;
+    --s3: #c58bff;
+    --s4: #3ecf8e;
+    --s5: #ff7aa8;
   }
   * { box-sizing: border-box; }
   body {
@@ -58,6 +63,14 @@
   table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
   th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
   th { color: var(--muted); font-weight: 500; font-size: 0.8rem; }
+  .wide { grid-column: 1 / -1; }
+  .linegraph { width: 100%; height: auto; display: block; }
+  .axis { fill: var(--muted); font-size: 15px; font-family: inherit; }
+  .grid-line { stroke: var(--line); stroke-width: 1; }
+  .grid-line.zero { stroke: var(--muted); stroke-dasharray: 4 3; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.85rem; }
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .legend-item i { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
   .perf-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 12px; }
   .perf { display: grid; gap: 10px; align-content: start; }
   .perf h3 { margin: 0; font-size: 0.95rem; }
