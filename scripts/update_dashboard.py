@@ -315,6 +315,13 @@ def impact_of(title):
     return IMPACT_DEFAULT
 
 
+def safe_url(url):
+    """Return the URL only if it is a plain http(s) link, else an empty string."""
+    url = (url or "").strip()
+    parts = urllib.parse.urlsplit(url)
+    return url if parts.scheme in ("http", "https") and parts.netloc else ""
+
+
 def headlines(limit=8):
     url = ("https://news.google.com/rss/search?q=" + urllib.parse.quote(NEWS_QUERY)
            + "&hl=en-IN&gl=IN&ceid=IN:en")
@@ -326,7 +333,10 @@ def headlines(limit=8):
         items = ET.fromstring(raw).iter("item")
         for item in items:
             title = (item.findtext("title") or "").strip()
+            source_el = item.find("source")
             source = (item.findtext("source") or "").strip()
+            link = safe_url(item.findtext("link"))
+            source_url = safe_url(source_el.get("url") if source_el is not None else "")
             if source and title.endswith(" - " + source):
                 title = title[: -len(source) - 3]
             key = re.sub(r"\W+", "", title.lower())[:60]
@@ -335,6 +345,7 @@ def headlines(limit=8):
             seen.add(key)
             when = item.findtext("pubDate") or NF
             out.append({"title": title, "source": source or NF, "when": when,
+                        "link": link, "source_url": source_url,
                         "tone": tone_of(title), "impact": impact_of(title)})
             if len(out) == limit:
                 break
@@ -657,6 +668,12 @@ def history_html(history):
             '      <tbody>\n' + "\n".join(rows) + '\n      </tbody>\n    </table></div>')
 
 
+def ext_link(url, text, cls=""):
+    """An external link that opens in a new tab without leaking the page address."""
+    attr = f' class="{cls}"' if cls else ""
+    return f'<a{attr} href="{esc(url)}" target="_blank" rel="noopener noreferrer">{esc(text)}</a>'
+
+
 def build(today):
     print("Fetching data...")
     gift = gift_nifty()
@@ -714,11 +731,14 @@ def build(today):
     if news:
         items = []
         for h in news:
+            title = ext_link(h["link"], h["title"], "headline-link") if h["link"] else esc(h["title"])
+            source = ext_link(h["source_url"], h["source"]) if h["source_url"] else esc(h["source"])
+            read = f'<span>{ext_link(h["link"], "Read article ↗")}</span>' if h["link"] else ""
             items.append(
                 '    <li class="card">\n'
-                f'      <div class="headline-title">{esc(h["title"])}</div>\n'
-                f'      <div class="meta"><span>Source: {esc(h["source"])}</span>'
-                f'<span>{esc(h["when"])}</span><span class="tone {h["tone"]}">{h["tone"]}</span></div>\n'
+                f'      <div class="headline-title">{title}</div>\n'
+                f'      <div class="meta"><span>Source: {source}</span>'
+                f'<span>{esc(h["when"])}</span><span class="tone {h["tone"]}">{h["tone"]}</span>{read}</div>\n'
                 f'      <div class="impact">Who it helps or hurts: {esc(h["impact"])}</div>\n    </li>')
         headlines_html = "\n".join(items)
     else:
