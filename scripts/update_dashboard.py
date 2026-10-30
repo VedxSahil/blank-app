@@ -28,6 +28,7 @@ NF = "not found"
 FLAT_BAND_PCT = 0.1  # within +/-0.1% of the Nifty close counts as flat
 SPARK_DAYS = 22  # about one month of trading days
 TOP_N = 8  # bars shown per top-performers chart
+LINE_N = 5  # stocks drawn on the one-month line graph
 # Sensex stocks, priced from their NSE listings on Yahoo Finance (.NS). BSE's own website
 # API refuses scripted requests and Yahoo's BSE (.BO) history has gaps, so NSE prices are
 # used for the same companies. This fixed list may lag index changes; symbols Yahoo does
@@ -408,12 +409,82 @@ def bar_chart(title, d):
             f'\n      <div class="sub">Source: {esc(d["source"])} · {esc(d["when"])}.{note}</div>\n    </div>')
 
 
+def month_lines(nse):
+    """One-month % change since the start of the window for the top Nifty 50 gainers."""
+    rows = ((nse or {}).get("NIFTY") or {}).get("rows", [])[:LINE_N]
+    _, nifty_bars = yahoo_bars("^NSEI")
+    sessions = sorted({b[0] for b in nifty_bars})[-SPARK_DAYS:]
+    if not rows or len(sessions) < 2:
+        return None
+    series = []
+    for r in rows:
+        _, bars = yahoo_bars(r["symbol"] + ".NS")
+        pts = [(d, c) for d, c, _ in bars if d >= sessions[0] and c]
+        if len(pts) >= 2:
+            base = pts[0][1]
+            series.append({"symbol": r["symbol"], "pts": [(d, (c / base - 1) * 100) for d, c in pts]})
+    return {"sessions": sessions, "series": series} if series else None
+
+
+SERIES_COLOURS = ("var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)", "var(--s5)")
+
+
+def line_graph(d):
+    head = ('    <div class="card perf wide">\n'
+            '      <h3>Last month: today\'s top 5 Nifty 50 gainers</h3>\n')
+    if not d:
+        return head + f'      <div class="value">{NF}</div>\n    </div>'
+    sessions, series = d["sessions"], d["series"]
+    w, h, left, right, top, bottom = 640, 280, 44, 12, 12, 26
+    ys = [v for sr in series for _, v in sr["pts"]] + [0]
+    lo, hi = min(ys), max(ys)
+    pad = (hi - lo) * 0.08 or 1
+    lo, hi = lo - pad, hi + pad
+    step = next(x for x in (1, 2, 5, 10, 20, 50) if (hi - lo) / x <= 6)
+    xpos = {day: left + i * (w - left - right) / (len(sessions) - 1) for i, day in enumerate(sessions)}
+
+    def y(v):
+        return top + (hi - v) / (hi - lo) * (h - top - bottom)
+
+    parts = [f'<svg class="linegraph" viewBox="0 0 {w} {h}" role="img" '
+             f'aria-label="Line graph of the last month\'s percentage change for {esc(", ".join(sr["symbol"] for sr in series))}">']
+    tick = (int(lo // step) + 1) * step
+    while tick < hi:
+        yy = y(tick)
+        parts.append(f'<line x1="{left}" x2="{w - right}" y1="{yy:.1f}" y2="{yy:.1f}" class="grid-line{" zero" if tick == 0 else ""}"/>'
+                     f'<text x="{left - 6}" y="{yy + 3.5:.1f}" text-anchor="end" class="axis">{"0" if tick == 0 else f"{tick:+d}"}%</text>')
+        tick += step
+    if lo < 0 < hi and 0 % step:
+        yy = y(0)
+        parts.append(f'<line x1="{left}" x2="{w - right}" y1="{yy:.1f}" y2="{yy:.1f}" class="grid-line zero"/>'
+                     f'<text x="{left - 6}" y="{yy + 3.5:.1f}" text-anchor="end" class="axis">0%</text>')
+    for i, day in ((0, sessions[0]), (len(sessions) // 2, sessions[len(sessions) // 2]), (len(sessions) - 1, sessions[-1])):
+        anchor = "start" if i == 0 else "end" if i == len(sessions) - 1 else "middle"
+        parts.append(f'<text x="{xpos[day]:.1f}" y="{h - 8}" text-anchor="{anchor}" class="axis">{day:%d %b}</text>')
+    for sr, colour in zip(series, SERIES_COLOURS):
+        pts = [(xpos[day], y(v)) for day, v in sr["pts"] if day in xpos]
+        if len(pts) < 2:
+            continue
+        parts.append(f'<polyline points="{" ".join(f"{a:.1f},{b:.1f}" for a, b in pts)}" fill="none" '
+                     f'stroke="{colour}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+                     f'<circle cx="{pts[-1][0]:.1f}" cy="{pts[-1][1]:.1f}" r="3.2" fill="{colour}"/>')
+    parts.append('</svg>')
+    legend = "".join(
+        f'<span class="legend-item"><i style="background:{c}"></i>{esc(sr["symbol"])} '
+        f'<b class="{direction(sr["pts"][-1][1])}">{esc(signed(sr["pts"][-1][1]))}%</b></span>'
+        for sr, c in zip(series, SERIES_COLOURS))
+    return (head + "      " + "".join(parts) + f'\n      <div class="legend">{legend}</div>\n'
+            f'      <div class="sub">Each line starts at 0% on {sessions[0]:%d %b %Y} and shows the change in closing '
+            'price since then; the last point is the latest price. Source: Yahoo Finance (NSE listings).</div>\n    </div>')
+
+
 def performers_html(nse, bse):
     nse = nse or {}
     return "\n".join([
         bar_chart("NSE · Nifty 50 top gainers", nse.get("NIFTY")),
         bar_chart("Sensex 30 · top gainers (NSE prices)", bse),
         bar_chart("NSE · all stocks top gainers", nse.get("allSec")),
+        line_graph(month_lines(nse)),
     ])
 
 
