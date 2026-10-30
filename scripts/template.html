@@ -528,6 +528,8 @@ $history
   var VIEWS = ['home', 'markets', 'explorer', 'performers', 'lab', 'news'];
   var sections = document.querySelectorAll('[data-view]');
   var links = document.querySelectorAll('[data-nav]');
+  // With scripting on, tabs replace anchors, so stop the browser jumping to a section behind the bar.
+  for (var k = 0; k < sections.length; k++) sections[k].removeAttribute('id');
   function wanted() {
     var h = '';
     try { h = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
