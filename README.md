@@ -13,6 +13,10 @@ For learning only. Not investment advice. Numbers can be wrong. Check them befor
 
 - Yahoo Finance: Nifty 50, Sensex, India VIX, USD/INR, Brent, S&P 500, Nasdaq, Dow.
 - NSE India: GIFT Nifty and FII/DII net flows.
+- Top performers: NSE India's gainers list (Nifty 50 and all stocks). For the BSE Sensex card,
+  BSE's own API refuses scripted requests, so prices come from Yahoo Finance's BSE (`.BO`)
+  listings for a fixed list of Sensex stocks. Stocks with a missing day of history are skipped,
+  and the card says how many loaded.
 - Google News RSS: headlines. Tone and the "helps or hurts" line come from simple keyword
   rules, so they are rough.
 
