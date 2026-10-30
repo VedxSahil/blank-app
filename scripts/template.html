@@ -79,6 +79,18 @@
   .bar-sym { font-weight: 600; overflow-wrap: anywhere; }
   .bar-track { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
   .bar-fill { height: 100%; border-radius: 5px; background: currentColor; }
+  .lab { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .lab > * { min-width: 0; }
+  .lab-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .lab label.field { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+  .lab input[type=number] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 1rem; }
+  .lab input:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+  .lab-stocks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .lab-stocks label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 0.85rem; cursor: pointer; }
+  .lab-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .lab-cards .tile .value { font-size: 1.25rem; }
+  .warn { border-color: var(--neg); color: var(--text); font-size: 0.9rem; }
+  .rules { margin: 0; padding-left: 1.2em; font-size: 0.9rem; color: var(--muted); }
   footer { margin: 32px 0 16px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
@@ -102,6 +114,102 @@ $tiles
   <div class="grid perf-grid">
 $performers
   </div>
+</section>
+
+<section aria-label="Strategy lab">
+  <h2>Strategy lab</h2>
+  <div class="card warn">
+    <strong>Learning tool, not advice.</strong> This screen only describes past prices. A stock that rose last month can fall next month, and any stock can lose money. Nothing here predicts or promises a return, and the stocks listed are not recommendations to buy.
+  </div>
+  <div class="card lab">
+    <div>
+      <h3 style="margin:0 0 6px;font-size:0.95rem">How the screen picks stocks</h3>
+      <ol class="rules">
+        <li>Start with the 30 Sensex stocks.</li>
+        <li>Keep a stock only if it rose over the last month and its latest price is above its 10-day average.</li>
+        <li>Rank by one-month gain divided by daily price swings (volatility), so steady risers rank above wild ones.</li>
+      </ol>
+      <div class="sub">Result today: $lab_summary. Prices from Yahoo Finance (NSE listings).</div>
+    </div>
+    <noscript><div class="sub">The calculator needs JavaScript, which is switched off in this browser.</div></noscript>
+    <div id="lab-app" hidden>
+      <div class="lab-form">
+        <label class="field" for="lab-amount">Amount to invest (₹)<input id="lab-amount" type="number" min="0" step="1000" value="100000"></label>
+        <label class="field" for="lab-target">If it rises by (%)<input id="lab-target" type="number" min="0" step="0.5" value="5"></label>
+        <label class="field" for="lab-stop">If it falls by (%)<input id="lab-stop" type="number" min="0" step="0.5" value="3"></label>
+        <label class="field" for="lab-cost">Costs, buy plus sell (%)<input id="lab-cost" type="number" min="0" step="0.05" value="0.2"></label>
+      </div>
+      <p class="sub">Pick stocks to include. The amount is split equally and rounded down to whole shares.</p>
+      <div class="lab-stocks" id="lab-stocks"></div>
+      <div id="lab-out" aria-live="polite"></div>
+    </div>
+  </div>
+  <script type="application/json" id="lab-data">$lab_json</script>
+  <script>
+  (function () {
+    var node = document.getElementById('lab-data');
+    var app = document.getElementById('lab-app');
+    if (!node || !app) return;
+    var data = JSON.parse(node.textContent);
+    var stocks = data.stocks;
+    var out = document.getElementById('lab-out');
+    var list = document.getElementById('lab-stocks');
+    app.hidden = false;
+    if (!stocks.length) {
+      app.innerHTML = '<div class="sub">No stock passed the rules today, so there is nothing to calculate.</div>';
+      return;
+    }
+    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+    function inr(x) { return (x < 0 ? '-' : '') + '\u20b9' + Math.round(Math.abs(x)).toLocaleString('en-IN'); }
+    function pct(x) { return (x > 0 ? '+' : '') + x.toFixed(2) + '%'; }
+    function cls(x) { return x > 0 ? 'up' : x < 0 ? 'down' : 'flat'; }
+    function num(id) { var v = parseFloat(document.getElementById(id).value); return isFinite(v) && v > 0 ? v : 0; }
+    stocks.forEach(function (s, i) {
+      var l = document.createElement('label');
+      l.innerHTML = '<input type="checkbox" id="lab-s-' + i + '"' + (i < 5 ? ' checked' : '') + '> ' + esc(s.symbol) +
+        ' <span class="chg ' + cls(s.ret) + '">' + pct(s.ret) + '</span>';
+      list.appendChild(l);
+    });
+    function card(label, value, sub, c) {
+      return '<div class="tile"><div class="label">' + label + '</div><div class="value ' + (c || '') + '">' + value +
+        '</div><div class="sub">' + (sub || '') + '</div></div>';
+    }
+    function calc() {
+      var amount = num('lab-amount'), up = num('lab-target'), down = num('lab-stop'), cost = num('lab-cost');
+      var chosen = stocks.filter(function (s, i) { return document.getElementById('lab-s-' + i).checked; });
+      if (!chosen.length || !amount) {
+        out.innerHTML = '<p class="sub">Enter an amount and tick at least one stock.</p>';
+        return;
+      }
+      var each = amount / chosen.length, invested = 0, thenNow = 0, rows = '';
+      chosen.forEach(function (s) {
+        var shares = Math.floor(each / s.price), spent = shares * s.price;
+        var worth = each * (1 + s.ret / 100);
+        invested += spent;
+        thenNow += worth;
+        rows += '<tr><td>' + esc(s.symbol) + '</td><td>' + shares + '</td><td>' + inr(spent) + '</td><td>' + inr(worth) +
+          ' <span class="chg ' + cls(s.ret) + '">' + pct(s.ret) + '</span></td></tr>';
+      });
+      var costs = invested * cost / 100;
+      var gain = invested * up / 100 - costs, loss = invested * down / 100 + costs;
+      var ratio = loss > 0 ? (gain / loss).toFixed(2) : 'n/a';
+      var pastPct = (thenNow / amount - 1) * 100;
+      out.innerHTML =
+        '<div class="lab-cards">' +
+        card('Invested today', inr(invested), 'Cash left over: ' + inr(amount - invested)) +
+        card('If it rises ' + up + '%', inr(gain), 'After costs of ' + inr(costs), gain >= 0 ? 'up' : 'down') +
+        card('If it falls ' + down + '%', '-' + inr(loss), 'Including costs', 'down') +
+        card('Gain to loss ratio', ratio, 'Break-even move: ' + cost.toFixed(2) + '%') +
+        card('Same amount a month ago', inr(thenNow), 'Past result: ' + pct(pastPct) + '. Not a forecast.', cls(pastPct)) +
+        '</div>' +
+        '<div class="table-wrap"><table><thead><tr><th>Stock</th><th>Shares</th><th>Cost today</th><th>Worth now if bought a month ago</th></tr></thead><tbody>' +
+        rows + '</tbody></table></div>';
+    }
+    app.addEventListener('input', calc);
+    app.addEventListener('change', calc);
+    calc();
+  })();
+  </script>
 </section>
 
 <section aria-label="Top headlines">

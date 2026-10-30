@@ -22,6 +22,15 @@ For learning only. Not investment advice. Numbers can be wrong. Check them befor
 - Google News RSS: headlines. Tone and the "helps or hurts" line come from simple keyword
   rules, so they are rough.
 
+## Strategy lab
+
+A learning calculator under the performance charts. A fixed rule screens the 30 Sensex stocks on
+past prices (rose over the last month, latest price above its 10-day average, ranked by gain
+divided by daily volatility). You enter an amount, a rise, a fall and costs, tick stocks, and it
+shows whole-share splits, the gain and loss in rupees, and what the same amount would be worth
+now if bought a month ago. It describes the past only. It is not a recommendation and does not
+predict returns.
+
 ## How it works
 
 - `.github/workflows/daily-update.yml` runs at 6:30 AM IST, Monday to Friday.

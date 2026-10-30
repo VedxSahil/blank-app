@@ -79,6 +79,18 @@
   .bar-sym { font-weight: 600; overflow-wrap: anywhere; }
   .bar-track { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
   .bar-fill { height: 100%; border-radius: 5px; background: currentColor; }
+  .lab { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .lab > * { min-width: 0; }
+  .lab-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .lab label.field { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+  .lab input[type=number] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 1rem; }
+  .lab input:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+  .lab-stocks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .lab-stocks label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 0.85rem; cursor: pointer; }
+  .lab-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .lab-cards .tile .value { font-size: 1.25rem; }
+  .warn { border-color: var(--neg); color: var(--text); font-size: 0.9rem; }
+  .rules { margin: 0; padding-left: 1.2em; font-size: 0.9rem; color: var(--muted); }
   footer { margin: 32px 0 16px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
@@ -87,15 +99,15 @@
 
 <header>
   <h1>Pre-Market Dashboard</h1>
-  <div class="updated">Last updated: <span id="last-updated">30 Oct 2026, 13:12 IST</span></div>
+  <div class="updated">Last updated: <span id="last-updated">30 Oct 2026, 15:19 IST</span></div>
 </header>
 
 <section aria-label="Key numbers">
   <div class="grid">
     <div class="tile">
       <div class="label">GIFT Nifty</div>
-      <div class="value">23,129.00 </div>
-      <div class="sub">Source: NSE India · Published: NSE timestamp 30-Oct-2026 13:10</div>
+      <div class="value">23,073.50 </div>
+      <div class="sub">Source: NSE India · Published: NSE timestamp 30-Oct-2026 15:16</div>
     </div>
     <div class="tile">
       <div class="label">Nifty 50 previous close</div>
@@ -117,15 +129,15 @@
     </div>
     <div class="tile">
       <div class="label">USD/INR</div>
-      <div class="value">95.0175 <span class="chg move-down">▼ -0.20%</span></div>
+      <div class="value">95.0200 <span class="chg move-down">▼ -0.20%</span></div>
       <svg class="spark move-down" viewBox="0 0 120 32" role="img" aria-label="Trend over 22 trading days, from 95.93 to 95.02"><polygon points="3,29 3.0,12.3 8.4,9.2 13.9,8.2 19.3,8.0 24.7,7.7 30.1,3.7 35.6,3.0 41.0,3.5 46.4,13.8 51.9,18.9 57.3,20.3 62.7,26.8 68.1,22.1 73.6,21.9 79.0,24.8 84.4,29.0 89.9,24.9 95.3,22.5 100.7,19.9 106.1,20.0 111.6,19.7 117.0,21.7 117,29" fill="currentColor" opacity="0.15"/><polyline points="3.0,12.3 8.4,9.2 13.9,8.2 19.3,8.0 24.7,7.7 30.1,3.7 35.6,3.0 41.0,3.5 46.4,13.8 51.9,18.9 57.3,20.3 62.7,26.8 68.1,22.1 73.6,21.9 79.0,24.8 84.4,29.0 89.9,24.9 95.3,22.5 100.7,19.9 106.1,20.0 111.6,19.7 117.0,21.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="117.0" cy="21.7" r="2.4" fill="currentColor"/></svg>
-      <div class="sub">Source: Yahoo Finance · Published: 30 Oct 2026, 13:11 IST</div>
+      <div class="sub">Source: Yahoo Finance · Published: 30 Oct 2026, 15:18 IST</div>
     </div>
     <div class="tile">
       <div class="label">Brent crude (USD)</div>
-      <div class="value">112.47 <span class="chg move-down">▼ -2.10%</span></div>
-      <svg class="spark move-up" viewBox="0 0 120 32" role="img" aria-label="Trend over 22 trading days, from 102.31 to 112.47"><polygon points="3,29 3.0,25.7 8.4,25.8 13.9,28.8 19.3,28.4 24.7,29.0 30.1,22.6 35.6,21.9 41.0,18.8 46.4,20.4 51.9,19.8 57.3,20.0 62.7,13.8 68.1,14.3 73.6,15.5 79.0,15.4 84.4,8.6 89.9,3.0 95.3,4.4 100.7,7.5 106.1,5.2 111.6,5.9 117.0,9.7 117,29" fill="currentColor" opacity="0.15"/><polyline points="3.0,25.7 8.4,25.8 13.9,28.8 19.3,28.4 24.7,29.0 30.1,22.6 35.6,21.9 41.0,18.8 46.4,20.4 51.9,19.8 57.3,20.0 62.7,13.8 68.1,14.3 73.6,15.5 79.0,15.4 84.4,8.6 89.9,3.0 95.3,4.4 100.7,7.5 106.1,5.2 111.6,5.9 117.0,9.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="117.0" cy="9.7" r="2.4" fill="currentColor"/></svg>
-      <div class="sub">Source: Yahoo Finance · Published: 30 Oct 2026, 13:01 IST</div>
+      <div class="value">112.58 <span class="chg move-down">▼ -2.00%</span></div>
+      <svg class="spark move-up" viewBox="0 0 120 32" role="img" aria-label="Trend over 22 trading days, from 102.31 to 112.58"><polygon points="3,29 3.0,25.7 8.4,25.8 13.9,28.8 19.3,28.4 24.7,29.0 30.1,22.6 35.6,21.9 41.0,18.8 46.4,20.4 51.9,19.8 57.3,20.0 62.7,13.8 68.1,14.3 73.6,15.5 79.0,15.4 84.4,8.6 89.9,3.0 95.3,4.4 100.7,7.5 106.1,5.2 111.6,5.9 117.0,9.5 117,29" fill="currentColor" opacity="0.15"/><polyline points="3.0,25.7 8.4,25.8 13.9,28.8 19.3,28.4 24.7,29.0 30.1,22.6 35.6,21.9 41.0,18.8 46.4,20.4 51.9,19.8 57.3,20.0 62.7,13.8 68.1,14.3 73.6,15.5 79.0,15.4 84.4,8.6 89.9,3.0 95.3,4.4 100.7,7.5 106.1,5.2 111.6,5.9 117.0,9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="117.0" cy="9.5" r="2.4" fill="currentColor"/></svg>
+      <div class="sub">Source: Yahoo Finance · Published: 30 Oct 2026, 15:07 IST</div>
     </div>
     <div class="tile">
       <div class="label">US markets overnight</div>
@@ -142,8 +154,8 @@
     </div>
     <div class="tile expected">
       <div class="label">Expected open</div>
-      <div class="value">+192.25 pts</div>
-      <div class="sub"><span class="tone positive">gap-up</span> GIFT Nifty 23,129.00 minus Nifty previous close 22,936.75 (+0.84%). Flat means within ±0.1%.</div>
+      <div class="value">+136.75 pts</div>
+      <div class="sub"><span class="tone positive">gap-up</span> GIFT Nifty 23,073.50 minus Nifty previous close 22,936.75 (+0.60%). Flat means within ±0.1%.</div>
     </div>
   </div>
 </section>
@@ -155,155 +167,251 @@
     <div class="card perf">
       <h3>NSE · Nifty 50 top gainers</h3>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">TRENT</span><span class="chg up">+6.01%</span></div>
-        <div class="bar-track" role="img" aria-label="TRENT +6.01 percent"><div class="bar-fill up" style="width:100.0%"></div></div>
-        <div class="sub">₹3,033.70 now · ₹2,861.70 previous close · +₹172.00</div>
+        <div class="bar-head"><span class="bar-sym">TRENT</span><span class="chg up">+5.36%</span></div>
+        <div class="bar-track" role="img" aria-label="TRENT +5.36 percent"><div class="bar-fill up" style="width:100.0%"></div></div>
+        <div class="sub">₹3,015.10 now · ₹2,861.70 previous close · +₹153.40</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">INDIGO</span><span class="chg up">+3.29%</span></div>
-        <div class="bar-track" role="img" aria-label="INDIGO +3.29 percent"><div class="bar-fill up" style="width:54.8%"></div></div>
-        <div class="sub">₹4,828.90 now · ₹4,675.00 previous close · +₹153.90</div>
+        <div class="bar-head"><span class="bar-sym">INDIGO</span><span class="chg up">+3.52%</span></div>
+        <div class="bar-track" role="img" aria-label="INDIGO +3.52 percent"><div class="bar-fill up" style="width:65.6%"></div></div>
+        <div class="sub">₹4,839.50 now · ₹4,675.00 previous close · +₹164.50</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">HCLTECH</span><span class="chg up">+2.71%</span></div>
-        <div class="bar-track" role="img" aria-label="HCLTECH +2.71 percent"><div class="bar-fill up" style="width:45.2%"></div></div>
-        <div class="sub">₹1,442.00 now · ₹1,403.90 previous close · +₹38.10</div>
+        <div class="bar-head"><span class="bar-sym">INFY</span><span class="chg up">+2.49%</span></div>
+        <div class="bar-track" role="img" aria-label="INFY +2.49 percent"><div class="bar-fill up" style="width:46.4%"></div></div>
+        <div class="sub">₹1,175.00 now · ₹1,146.50 previous close · +₹28.50</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">INFY</span><span class="chg up">+2.53%</span></div>
-        <div class="bar-track" role="img" aria-label="INFY +2.53 percent"><div class="bar-fill up" style="width:42.0%"></div></div>
-        <div class="sub">₹1,175.45 now · ₹1,146.50 previous close · +₹28.95</div>
+        <div class="bar-head"><span class="bar-sym">SUNPHARMA</span><span class="chg up">+2.25%</span></div>
+        <div class="bar-track" role="img" aria-label="SUNPHARMA +2.25 percent"><div class="bar-fill up" style="width:42.0%"></div></div>
+        <div class="sub">₹1,800.60 now · ₹1,761.00 previous close · +₹39.60</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">SUNPHARMA</span><span class="chg up">+2.40%</span></div>
-        <div class="bar-track" role="img" aria-label="SUNPHARMA +2.40 percent"><div class="bar-fill up" style="width:40.0%"></div></div>
-        <div class="sub">₹1,803.30 now · ₹1,761.00 previous close · +₹42.30</div>
+        <div class="bar-head"><span class="bar-sym">HCLTECH</span><span class="chg up">+2.22%</span></div>
+        <div class="bar-track" role="img" aria-label="HCLTECH +2.22 percent"><div class="bar-fill up" style="width:41.5%"></div></div>
+        <div class="sub">₹1,435.10 now · ₹1,403.90 previous close · +₹31.20</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">POWERGRID</span><span class="chg up">+2.35%</span></div>
-        <div class="bar-track" role="img" aria-label="POWERGRID +2.35 percent"><div class="bar-fill up" style="width:39.0%"></div></div>
-        <div class="sub">₹266.10 now · ₹260.00 previous close · +₹6.10</div>
+        <div class="bar-head"><span class="bar-sym">MAXHEALTH</span><span class="chg up">+2.04%</span></div>
+        <div class="bar-track" role="img" aria-label="MAXHEALTH +2.04 percent"><div class="bar-fill up" style="width:38.1%"></div></div>
+        <div class="sub">₹868.55 now · ₹851.15 previous close · +₹17.40</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">ETERNAL</span><span class="chg up">+2.22%</span></div>
-        <div class="bar-track" role="img" aria-label="ETERNAL +2.22 percent"><div class="bar-fill up" style="width:36.9%"></div></div>
-        <div class="sub">₹345.35 now · ₹337.85 previous close · +₹7.50</div>
+        <div class="bar-head"><span class="bar-sym">NTPC</span><span class="chg up">+1.63%</span></div>
+        <div class="bar-track" role="img" aria-label="NTPC +1.63 percent"><div class="bar-fill up" style="width:30.3%"></div></div>
+        <div class="sub">₹315.55 now · ₹310.50 previous close · +₹5.05</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">NTPC</span><span class="chg up">+2.14%</span></div>
-        <div class="bar-track" role="img" aria-label="NTPC +2.14 percent"><div class="bar-fill up" style="width:35.6%"></div></div>
-        <div class="sub">₹317.15 now · ₹310.50 previous close · +₹6.65</div>
+        <div class="bar-head"><span class="bar-sym">APOLLOHOSP</span><span class="chg up">+1.59%</span></div>
+        <div class="bar-track" role="img" aria-label="APOLLOHOSP +1.59 percent"><div class="bar-fill up" style="width:29.6%"></div></div>
+        <div class="sub">₹8,330.00 now · ₹8,200.00 previous close · +₹130.00</div>
       </div>
-      <div class="sub">Source: NSE India · NSE timestamp 30-Oct-2026 13:11:05.</div>
+      <div class="sub">Source: NSE India · NSE timestamp 30-Oct-2026 15:18:02.</div>
     </div>
     <div class="card perf">
       <h3>Sensex 30 · top gainers (NSE prices)</h3>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">TRENT</span><span class="chg up">+6.01%</span></div>
-        <div class="bar-track" role="img" aria-label="TRENT +6.01 percent"><div class="bar-fill up" style="width:100.0%"></div></div>
-        <div class="sub">₹3,033.70 now · ₹2,861.70 previous close · +₹172.00</div>
+        <div class="bar-head"><span class="bar-sym">TRENT</span><span class="chg up">+5.36%</span></div>
+        <div class="bar-track" role="img" aria-label="TRENT +5.36 percent"><div class="bar-fill up" style="width:100.0%"></div></div>
+        <div class="sub">₹3,015.10 now · ₹2,861.70 previous close · +₹153.40</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">HCLTECH</span><span class="chg up">+2.71%</span></div>
-        <div class="bar-track" role="img" aria-label="HCLTECH +2.71 percent"><div class="bar-fill up" style="width:45.2%"></div></div>
-        <div class="sub">₹1,442.00 now · ₹1,403.90 previous close · +₹38.10</div>
+        <div class="bar-head"><span class="bar-sym">INFY</span><span class="chg up">+2.49%</span></div>
+        <div class="bar-track" role="img" aria-label="INFY +2.49 percent"><div class="bar-fill up" style="width:46.4%"></div></div>
+        <div class="sub">₹1,175.00 now · ₹1,146.50 previous close · +₹28.50</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">INFY</span><span class="chg up">+2.53%</span></div>
-        <div class="bar-track" role="img" aria-label="INFY +2.53 percent"><div class="bar-fill up" style="width:42.0%"></div></div>
-        <div class="sub">₹1,175.45 now · ₹1,146.50 previous close · +₹28.95</div>
+        <div class="bar-head"><span class="bar-sym">SUNPHARMA</span><span class="chg up">+2.25%</span></div>
+        <div class="bar-track" role="img" aria-label="SUNPHARMA +2.25 percent"><div class="bar-fill up" style="width:42.0%"></div></div>
+        <div class="sub">₹1,800.60 now · ₹1,761.00 previous close · +₹39.60</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">SUNPHARMA</span><span class="chg up">+2.40%</span></div>
-        <div class="bar-track" role="img" aria-label="SUNPHARMA +2.40 percent"><div class="bar-fill up" style="width:40.0%"></div></div>
-        <div class="sub">₹1,803.30 now · ₹1,761.00 previous close · +₹42.30</div>
+        <div class="bar-head"><span class="bar-sym">HCLTECH</span><span class="chg up">+2.22%</span></div>
+        <div class="bar-track" role="img" aria-label="HCLTECH +2.22 percent"><div class="bar-fill up" style="width:41.5%"></div></div>
+        <div class="sub">₹1,435.10 now · ₹1,403.90 previous close · +₹31.20</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">POWERGRID</span><span class="chg up">+2.35%</span></div>
-        <div class="bar-track" role="img" aria-label="POWERGRID +2.35 percent"><div class="bar-fill up" style="width:39.0%"></div></div>
-        <div class="sub">₹266.10 now · ₹260.00 previous close · +₹6.10</div>
+        <div class="bar-head"><span class="bar-sym">NTPC</span><span class="chg up">+1.63%</span></div>
+        <div class="bar-track" role="img" aria-label="NTPC +1.63 percent"><div class="bar-fill up" style="width:30.3%"></div></div>
+        <div class="sub">₹315.55 now · ₹310.50 previous close · +₹5.05</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">ETERNAL</span><span class="chg up">+2.22%</span></div>
-        <div class="bar-track" role="img" aria-label="ETERNAL +2.22 percent"><div class="bar-fill up" style="width:36.9%"></div></div>
-        <div class="sub">₹345.35 now · ₹337.85 previous close · +₹7.50</div>
+        <div class="bar-head"><span class="bar-sym">ETERNAL</span><span class="chg up">+1.38%</span></div>
+        <div class="bar-track" role="img" aria-label="ETERNAL +1.38 percent"><div class="bar-fill up" style="width:25.7%"></div></div>
+        <div class="sub">₹342.50 now · ₹337.85 previous close · +₹4.65</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">NTPC</span><span class="chg up">+2.14%</span></div>
-        <div class="bar-track" role="img" aria-label="NTPC +2.14 percent"><div class="bar-fill up" style="width:35.6%"></div></div>
-        <div class="sub">₹317.15 now · ₹310.50 previous close · +₹6.65</div>
+        <div class="bar-head"><span class="bar-sym">TECHM</span><span class="chg up">+1.36%</span></div>
+        <div class="bar-track" role="img" aria-label="TECHM +1.36 percent"><div class="bar-fill up" style="width:25.3%"></div></div>
+        <div class="sub">₹1,793.60 now · ₹1,769.60 previous close · +₹24.00</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">TECHM</span><span class="chg up">+1.93%</span></div>
-        <div class="bar-track" role="img" aria-label="TECHM +1.93 percent"><div class="bar-fill up" style="width:32.2%"></div></div>
-        <div class="sub">₹1,803.80 now · ₹1,769.60 previous close · +₹34.20</div>
+        <div class="bar-head"><span class="bar-sym">TCS</span><span class="chg up">+1.29%</span></div>
+        <div class="bar-track" role="img" aria-label="TCS +1.29 percent"><div class="bar-fill up" style="width:24.0%"></div></div>
+        <div class="sub">₹2,509.90 now · ₹2,478.00 previous close · +₹31.90</div>
       </div>
-      <div class="sub">Source: NSE India, plus Yahoo Finance for stocks not in NSE&#x27;s list · 30 Oct 2026 vs close of 29 Oct 2026. Only 28 of 30 Sensex stocks had complete data, so this list may miss some movers.</div>
+      <div class="sub">Source: NSE India, plus Yahoo Finance for stocks not in NSE&#x27;s list · 30 Oct 2026 vs close of 29 Oct 2026. All 30 Sensex stocks loaded.</div>
     </div>
     <div class="card perf">
       <h3>NSE · all stocks top gainers</h3>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">MARSONS</span><span class="chg up">+19.98%</span></div>
-        <div class="bar-track" role="img" aria-label="MARSONS +19.98 percent"><div class="bar-fill up" style="width:100.0%"></div></div>
-        <div class="sub">₹148.84 now · ₹124.05 previous close · +₹24.79</div>
+        <div class="bar-head"><span class="bar-sym">MARSONS</span><span class="chg up">+20.00%</span></div>
+        <div class="bar-track" role="img" aria-label="MARSONS +20.00 percent"><div class="bar-fill up" style="width:100.0%"></div></div>
+        <div class="sub">₹148.86 now · ₹124.05 previous close · +₹24.81</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-head"><span class="bar-sym">AVANCE</span><span class="chg up">+20.00%</span></div>
+        <div class="bar-track" role="img" aria-label="AVANCE +20.00 percent"><div class="bar-fill up" style="width:100.0%"></div></div>
+        <div class="sub">₹0.66 now · ₹0.55 previous close · +₹0.11</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-head"><span class="bar-sym">ANNAPURNA</span><span class="chg up">+20.00%</span></div>
+        <div class="bar-track" role="img" aria-label="ANNAPURNA +20.00 percent"><div class="bar-fill up" style="width:100.0%"></div></div>
+        <div class="sub">₹123.24 now · ₹102.70 previous close · +₹20.54</div>
       </div>
       <div class="bar-row">
         <div class="bar-head"><span class="bar-sym">BOROLTD</span><span class="chg up">+19.98%</span></div>
-        <div class="bar-track" role="img" aria-label="BOROLTD +19.98 percent"><div class="bar-fill up" style="width:100.0%"></div></div>
+        <div class="bar-track" role="img" aria-label="BOROLTD +19.98 percent"><div class="bar-fill up" style="width:99.9%"></div></div>
         <div class="sub">₹286.40 now · ₹238.70 previous close · +₹47.70</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">VEDPOWER</span><span class="chg up">+14.82%</span></div>
-        <div class="bar-track" role="img" aria-label="VEDPOWER +14.82 percent"><div class="bar-fill up" style="width:74.2%"></div></div>
-        <div class="sub">₹33.16 now · ₹28.88 previous close · +₹4.28</div>
+        <div class="bar-head"><span class="bar-sym">JISLJALEQS</span><span class="chg up">+19.83%</span></div>
+        <div class="bar-track" role="img" aria-label="JISLJALEQS +19.83 percent"><div class="bar-fill up" style="width:99.2%"></div></div>
+        <div class="sub">₹28.46 now · ₹23.75 previous close · +₹4.71</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">FIBERWEB</span><span class="chg up">+14.06%</span></div>
-        <div class="bar-track" role="img" aria-label="FIBERWEB +14.06 percent"><div class="bar-fill up" style="width:70.4%"></div></div>
-        <div class="sub">₹28.07 now · ₹24.61 previous close · +₹3.46</div>
+        <div class="bar-head"><span class="bar-sym">VEDPOWER</span><span class="chg up">+15.34%</span></div>
+        <div class="bar-track" role="img" aria-label="VEDPOWER +15.34 percent"><div class="bar-fill up" style="width:76.7%"></div></div>
+        <div class="sub">₹33.31 now · ₹28.88 previous close · +₹4.43</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">MENONBE</span><span class="chg up">+13.73%</span></div>
-        <div class="bar-track" role="img" aria-label="MENONBE +13.73 percent"><div class="bar-fill up" style="width:68.7%"></div></div>
-        <div class="sub">₹287.00 now · ₹252.35 previous close · +₹34.65</div>
+        <div class="bar-head"><span class="bar-sym">QUICKHEAL</span><span class="chg up">+13.74%</span></div>
+        <div class="bar-track" role="img" aria-label="QUICKHEAL +13.74 percent"><div class="bar-fill up" style="width:68.7%"></div></div>
+        <div class="sub">₹155.58 now · ₹136.79 previous close · +₹18.79</div>
       </div>
       <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">VOGL</span><span class="chg up">+12.13%</span></div>
-        <div class="bar-track" role="img" aria-label="VOGL +12.13 percent"><div class="bar-fill up" style="width:60.7%"></div></div>
-        <div class="sub">₹31.24 now · ₹27.86 previous close · +₹3.38</div>
+        <div class="bar-head"><span class="bar-sym">JISLDVREQS</span><span class="chg up">+12.55%</span></div>
+        <div class="bar-track" role="img" aria-label="JISLDVREQS +12.55 percent"><div class="bar-fill up" style="width:62.7%"></div></div>
+        <div class="sub">₹18.75 now · ₹16.66 previous close · +₹2.09</div>
       </div>
-      <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">INNOVISION</span><span class="chg up">+11.75%</span></div>
-        <div class="bar-track" role="img" aria-label="INNOVISION +11.75 percent"><div class="bar-fill up" style="width:58.8%"></div></div>
-        <div class="sub">₹225.90 now · ₹202.15 previous close · +₹23.75</div>
-      </div>
-      <div class="bar-row">
-        <div class="bar-head"><span class="bar-sym">JISLJALEQS</span><span class="chg up">+10.99%</span></div>
-        <div class="bar-track" role="img" aria-label="JISLJALEQS +10.99 percent"><div class="bar-fill up" style="width:55.0%"></div></div>
-        <div class="sub">₹26.36 now · ₹23.75 previous close · +₹2.61</div>
-      </div>
-      <div class="sub">Source: NSE India · NSE timestamp 30-Oct-2026 13:11:05.</div>
+      <div class="sub">Source: NSE India · NSE timestamp 30-Oct-2026 15:18:02.</div>
     </div>
     <div class="card perf wide">
       <h3>Last month: today's top 5 Nifty 50 gainers</h3>
-      <svg class="linegraph" viewBox="0 0 640 280" role="img" aria-label="Line graph of the last month's percentage change for TRENT, INDIGO, HCLTECH, INFY, SUNPHARMA"><line x1="44" x2="628" y1="247.1" y2="247.1" class="grid-line"/><text x="38" y="250.6" text-anchor="end" class="axis">-10%</text><line x1="44" x2="628" y1="170.1" y2="170.1" class="grid-line zero"/><text x="38" y="173.6" text-anchor="end" class="axis">0%</text><line x1="44" x2="628" y1="93.1" y2="93.1" class="grid-line"/><text x="38" y="96.6" text-anchor="end" class="axis">+10%</text><line x1="44" x2="628" y1="16.2" y2="16.2" class="grid-line"/><text x="38" y="19.7" text-anchor="end" class="axis">+20%</text><text x="44.0" y="272" text-anchor="start" class="axis">30 Sep</text><text x="336.0" y="272" text-anchor="middle" class="axis">15 Oct</text><text x="628.0" y="272" text-anchor="end" class="axis">30 Oct</text><polyline points="44.0,170.1 73.2,182.3 102.4,182.3 131.6,86.6 160.8,91.2 190.0,95.3 219.2,83.0 248.4,84.6 277.6,62.6 306.8,67.5 336.0,73.8 365.2,71.1 394.4,90.8 423.6,111.3 452.8,124.8 482.0,139.0 511.2,131.2 540.4,111.7 569.6,84.3 598.8,99.6 628.0,49.3" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="49.3" r="3.2" fill="var(--s1)"/><polyline points="44.0,170.1 73.2,178.5 102.4,177.7 131.6,159.9 160.8,169.2 190.0,196.5 219.2,193.4 248.4,199.3 277.6,198.5 306.8,211.1 336.0,201.9 365.2,216.0 394.4,214.0 423.6,223.0 452.8,229.4 482.0,237.3 511.2,228.2 540.4,230.0 569.6,215.5 628.0,193.6" fill="none" stroke="var(--s2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="193.6" r="3.2" fill="var(--s2)"/><polyline points="44.0,170.1 73.2,161.9 102.4,187.7 131.6,186.1 160.8,198.3 190.0,203.4 219.2,178.4 248.4,174.5 277.6,110.0 306.8,109.4 336.0,88.8 365.2,76.2 394.4,76.3 423.6,48.6 452.8,50.2 482.0,49.8 511.2,53.1 540.4,51.2 569.6,63.4 598.8,61.3 628.0,36.8" fill="none" stroke="var(--s3)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="36.8" r="3.2" fill="var(--s3)"/><polyline points="44.0,170.1 73.2,138.5 102.4,149.7 131.6,154.8 160.8,171.8 190.0,167.9 219.2,147.4 248.4,150.1 277.6,117.5 306.8,97.4 336.0,80.4 365.2,40.7 394.4,64.3 423.6,35.5 452.8,46.8 482.0,46.5 511.2,37.0 540.4,39.3 569.6,70.2 598.8,52.1 628.0,28.7" fill="none" stroke="var(--s4)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="28.7" r="3.2" fill="var(--s4)"/><polyline points="44.0,170.1 73.2,176.7 102.4,185.8 131.6,175.4 160.8,185.2 190.0,194.2 219.2,194.1 248.4,194.1 277.6,189.6 306.8,199.9 336.0,192.4 365.2,194.6 394.4,201.3 423.6,200.4 452.8,195.0 482.0,199.2 511.2,202.6 540.4,197.8 569.6,195.2 628.0,175.5" fill="none" stroke="var(--s5)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="175.5" r="3.2" fill="var(--s5)"/></svg>
-      <div class="legend"><span class="legend-item"><i style="background:var(--s1)"></i>TRENT <b class="up">+15.70%</b></span><span class="legend-item"><i style="background:var(--s2)"></i>INDIGO <b class="down">-3.05%</b></span><span class="legend-item"><i style="background:var(--s3)"></i>HCLTECH <b class="up">+17.32%</b></span><span class="legend-item"><i style="background:var(--s4)"></i>INFY <b class="up">+18.37%</b></span><span class="legend-item"><i style="background:var(--s5)"></i>SUNPHARMA <b class="down">-0.69%</b></span></div>
+      <svg class="linegraph" viewBox="0 0 640 280" role="img" aria-label="Line graph of the last month's percentage change for TRENT, INDIGO, INFY, SUNPHARMA, HCLTECH"><line x1="44" x2="628" y1="247.2" y2="247.2" class="grid-line"/><text x="38" y="250.7" text-anchor="end" class="axis">-10%</text><line x1="44" x2="628" y1="169.7" y2="169.7" class="grid-line zero"/><text x="38" y="173.2" text-anchor="end" class="axis">0%</text><line x1="44" x2="628" y1="92.2" y2="92.2" class="grid-line"/><text x="38" y="95.7" text-anchor="end" class="axis">+10%</text><line x1="44" x2="628" y1="14.7" y2="14.7" class="grid-line"/><text x="38" y="18.2" text-anchor="end" class="axis">+20%</text><text x="44.0" y="272" text-anchor="start" class="axis">30 Sep</text><text x="336.0" y="272" text-anchor="middle" class="axis">15 Oct</text><text x="628.0" y="272" text-anchor="end" class="axis">30 Oct</text><polyline points="44.0,169.7 73.2,182.0 102.4,182.0 131.6,85.6 160.8,90.3 190.0,94.4 219.2,82.0 248.4,83.6 277.6,61.5 306.8,66.4 336.0,72.7 365.2,70.1 394.4,89.9 423.6,110.5 452.8,124.1 482.0,138.4 511.2,130.6 540.4,110.9 569.6,83.3 598.8,98.7 628.0,53.4" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="53.4" r="3.2" fill="var(--s1)"/><polyline points="44.0,169.7 73.2,178.1 102.4,177.3 131.6,159.3 160.8,168.8 190.0,196.3 219.2,193.2 248.4,199.1 277.6,198.2 306.8,211.0 336.0,201.7 365.2,215.9 394.4,213.8 423.6,222.9 452.8,229.4 482.0,237.3 511.2,228.1 540.4,229.9 569.6,215.4 598.8,217.7 628.0,192.1" fill="none" stroke="var(--s2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="192.1" r="3.2" fill="var(--s2)"/><polyline points="44.0,169.7 73.2,137.8 102.4,149.1 131.6,154.3 160.8,171.3 190.0,167.4 219.2,146.8 248.4,149.5 277.6,116.7 306.8,96.5 336.0,79.4 365.2,39.4 394.4,63.2 423.6,34.1 452.8,45.6 482.0,45.2 511.2,35.7 540.4,38.0 569.6,69.1 598.8,50.9 628.0,28.7" fill="none" stroke="var(--s3)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="28.7" r="3.2" fill="var(--s3)"/><polyline points="44.0,169.7 73.2,176.3 102.4,185.4 131.6,175.0 160.8,184.9 190.0,193.9 219.2,193.8 248.4,193.8 277.6,189.3 306.8,199.6 336.0,192.1 365.2,194.3 394.4,201.1 423.6,200.2 452.8,194.7 482.0,198.9 511.2,202.4 540.4,197.6 569.6,194.9 598.8,193.4 628.0,176.5" fill="none" stroke="var(--s4)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="176.5" r="3.2" fill="var(--s4)"/><polyline points="44.0,169.7 73.2,161.4 102.4,187.4 131.6,185.8 160.8,198.0 190.0,203.1 219.2,178.1 248.4,174.1 277.6,109.2 306.8,108.6 336.0,87.8 365.2,75.2 394.4,75.3 423.6,47.4 452.8,48.9 482.0,48.6 511.2,51.9 540.4,50.0 569.6,62.3 598.8,60.1 628.0,40.5" fill="none" stroke="var(--s5)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="628.0" cy="40.5" r="3.2" fill="var(--s5)"/></svg>
+      <div class="legend"><span class="legend-item"><i style="background:var(--s1)"></i>TRENT <b class="up">+15.01%</b></span><span class="legend-item"><i style="background:var(--s2)"></i>INDIGO <b class="down">-2.90%</b></span><span class="legend-item"><i style="background:var(--s3)"></i>INFY <b class="up">+18.20%</b></span><span class="legend-item"><i style="background:var(--s4)"></i>SUNPHARMA <b class="down">-0.88%</b></span><span class="legend-item"><i style="background:var(--s5)"></i>HCLTECH <b class="up">+16.67%</b></span></div>
       <div class="sub">Each line starts at 0% on 30 Sep 2026 and shows the change in closing price since then; the last point is the latest price. Source: Yahoo Finance (NSE listings).</div>
     </div>
   </div>
+</section>
+
+<section aria-label="Strategy lab">
+  <h2>Strategy lab</h2>
+  <div class="card warn">
+    <strong>Learning tool, not advice.</strong> This screen only describes past prices. A stock that rose last month can fall next month, and any stock can lose money. Nothing here predicts or promises a return, and the stocks listed are not recommendations to buy.
+  </div>
+  <div class="card lab">
+    <div>
+      <h3 style="margin:0 0 6px;font-size:0.95rem">How the screen picks stocks</h3>
+      <ol class="rules">
+        <li>Start with the 30 Sensex stocks.</li>
+        <li>Keep a stock only if it rose over the last month and its latest price is above its 10-day average.</li>
+        <li>Rank by one-month gain divided by daily price swings (volatility), so steady risers rank above wild ones.</li>
+      </ol>
+      <div class="sub">Result today: 10 of 30 screened Sensex stocks passed the rules. Prices from Yahoo Finance (NSE listings).</div>
+    </div>
+    <noscript><div class="sub">The calculator needs JavaScript, which is switched off in this browser.</div></noscript>
+    <div id="lab-app" hidden>
+      <div class="lab-form">
+        <label class="field" for="lab-amount">Amount to invest (₹)<input id="lab-amount" type="number" min="0" step="1000" value="100000"></label>
+        <label class="field" for="lab-target">If it rises by (%)<input id="lab-target" type="number" min="0" step="0.5" value="5"></label>
+        <label class="field" for="lab-stop">If it falls by (%)<input id="lab-stop" type="number" min="0" step="0.5" value="3"></label>
+        <label class="field" for="lab-cost">Costs, buy plus sell (%)<input id="lab-cost" type="number" min="0" step="0.05" value="0.2"></label>
+      </div>
+      <p class="sub">Pick stocks to include. The amount is split equally and rounded down to whole shares.</p>
+      <div class="lab-stocks" id="lab-stocks"></div>
+      <div id="lab-out" aria-live="polite"></div>
+    </div>
+  </div>
+  <script type="application/json" id="lab-data">{"stocks": [{"symbol": "TCS", "price": 2509.9, "ret": 22.4, "vol": 2.23, "since": "2026-09-30", "score": 10.04}, {"symbol": "INFY", "price": 1175.0, "ret": 18.2, "vol": 2.38, "since": "2026-09-30", "score": 7.65}, {"symbol": "BHARTIARTL", "price": 1962.0, "ret": 11.67, "vol": 1.62, "since": "2026-09-30", "score": 7.2}, {"symbol": "HCLTECH", "price": 1435.1, "ret": 16.67, "vol": 2.41, "since": "2026-09-30", "score": 6.92}, {"symbol": "KOTAKBANK", "price": 461.3, "ret": 10.62, "vol": 1.66, "since": "2026-09-30", "score": 6.4}, {"symbol": "ICICIBANK", "price": 1395.7, "ret": 5.6, "vol": 1.27, "since": "2026-09-30", "score": 4.41}, {"symbol": "TRENT", "price": 3015.1, "ret": 15.01, "vol": 3.46, "since": "2026-09-30", "score": 4.34}, {"symbol": "ETERNAL", "price": 342.5, "ret": 7.03, "vol": 2.17, "since": "2026-09-30", "score": 3.24}, {"symbol": "LT", "price": 3848.2, "ret": 2.35, "vol": 1.48, "since": "2026-09-30", "score": 1.59}, {"symbol": "ADANIPORTS", "price": 1840.0, "ret": 2.32, "vol": 2.25, "since": "2026-09-30", "score": 1.03}], "checked": 30, "universe": 30}</script>
+  <script>
+  (function () {
+    var node = document.getElementById('lab-data');
+    var app = document.getElementById('lab-app');
+    if (!node || !app) return;
+    var data = JSON.parse(node.textContent);
+    var stocks = data.stocks;
+    var out = document.getElementById('lab-out');
+    var list = document.getElementById('lab-stocks');
+    app.hidden = false;
+    if (!stocks.length) {
+      app.innerHTML = '<div class="sub">No stock passed the rules today, so there is nothing to calculate.</div>';
+      return;
+    }
+    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+    function inr(x) { return (x < 0 ? '-' : '') + '\u20b9' + Math.round(Math.abs(x)).toLocaleString('en-IN'); }
+    function pct(x) { return (x > 0 ? '+' : '') + x.toFixed(2) + '%'; }
+    function cls(x) { return x > 0 ? 'up' : x < 0 ? 'down' : 'flat'; }
+    function num(id) { var v = parseFloat(document.getElementById(id).value); return isFinite(v) && v > 0 ? v : 0; }
+    stocks.forEach(function (s, i) {
+      var l = document.createElement('label');
+      l.innerHTML = '<input type="checkbox" id="lab-s-' + i + '"' + (i < 5 ? ' checked' : '') + '> ' + esc(s.symbol) +
+        ' <span class="chg ' + cls(s.ret) + '">' + pct(s.ret) + '</span>';
+      list.appendChild(l);
+    });
+    function card(label, value, sub, c) {
+      return '<div class="tile"><div class="label">' + label + '</div><div class="value ' + (c || '') + '">' + value +
+        '</div><div class="sub">' + (sub || '') + '</div></div>';
+    }
+    function calc() {
+      var amount = num('lab-amount'), up = num('lab-target'), down = num('lab-stop'), cost = num('lab-cost');
+      var chosen = stocks.filter(function (s, i) { return document.getElementById('lab-s-' + i).checked; });
+      if (!chosen.length || !amount) {
+        out.innerHTML = '<p class="sub">Enter an amount and tick at least one stock.</p>';
+        return;
+      }
+      var each = amount / chosen.length, invested = 0, thenNow = 0, rows = '';
+      chosen.forEach(function (s) {
+        var shares = Math.floor(each / s.price), spent = shares * s.price;
+        var worth = each * (1 + s.ret / 100);
+        invested += spent;
+        thenNow += worth;
+        rows += '<tr><td>' + esc(s.symbol) + '</td><td>' + shares + '</td><td>' + inr(spent) + '</td><td>' + inr(worth) +
+          ' <span class="chg ' + cls(s.ret) + '">' + pct(s.ret) + '</span></td></tr>';
+      });
+      var costs = invested * cost / 100;
+      var gain = invested * up / 100 - costs, loss = invested * down / 100 + costs;
+      var ratio = loss > 0 ? (gain / loss).toFixed(2) : 'n/a';
+      var pastPct = (thenNow / amount - 1) * 100;
+      out.innerHTML =
+        '<div class="lab-cards">' +
+        card('Invested today', inr(invested), 'Cash left over: ' + inr(amount - invested)) +
+        card('If it rises ' + up + '%', inr(gain), 'After costs of ' + inr(costs), gain >= 0 ? 'up' : 'down') +
+        card('If it falls ' + down + '%', '-' + inr(loss), 'Including costs', 'down') +
+        card('Gain to loss ratio', ratio, 'Break-even move: ' + cost.toFixed(2) + '%') +
+        card('Same amount a month ago', inr(thenNow), 'Past result: ' + pct(pastPct) + '. Not a forecast.', cls(pastPct)) +
+        '</div>' +
+        '<div class="table-wrap"><table><thead><tr><th>Stock</th><th>Shares</th><th>Cost today</th><th>Worth now if bought a month ago</th></tr></thead><tbody>' +
+        rows + '</tbody></table></div>';
+    }
+    app.addEventListener('input', calc);
+    app.addEventListener('change', calc);
+    calc();
+  })();
+  </script>
 </section>
 
 <section aria-label="Top headlines">
   <h2>Top headlines</h2>
   <ol class="headlines">
     <li class="card">
-      <div class="headline-title">Stock market outlook: Crude oil prices to FPI inflows - 8 triggers that could reverse trend in Sensex, Nifty 50</div>
-      <div class="meta"><span>Source: Livemint</span><span>Fri, 30 Oct 2026 03:00:57 GMT</span><span class="tone neutral">neutral</span></div>
+      <div class="headline-title">Sensex Plunges 1,045 Points, Nifty Hits 2026 Low as Oil Prices Surge</div>
+      <div class="meta"><span>Source: INDIA New England News</span><span>Fri, 30 Oct 2026 07:58:05 GMT</span><span class="tone negative">negative</span></div>
       <div class="impact">Who it helps or hurts: Oil moves matter most to importers, airlines and paint makers on one side and oil producers on the other.</div>
     </li>
     <li class="card">
-      <div class="headline-title">Sensex, Nifty trade flat as IT gains counter crude oil concerns</div>
-      <div class="meta"><span>Source: India Today</span><span>Fri, 30 Oct 2026 05:07:58 GMT</span><span class="tone positive">positive</span></div>
+      <div class="headline-title">Stock market outlook: Crude oil prices to FPI inflows - 8 triggers that could reverse trend in Sensex, Nifty 50</div>
+      <div class="meta"><span>Source: Livemint</span><span>Fri, 30 Oct 2026 03:00:57 GMT</span><span class="tone neutral">neutral</span></div>
       <div class="impact">Who it helps or hurts: Oil moves matter most to importers, airlines and paint makers on one side and oil producers on the other.</div>
     </li>
     <li class="card">
@@ -312,14 +420,14 @@
       <div class="impact">Who it helps or hurts: Results mainly affect the company&#x27;s own shareholders and its sector peers.</div>
     </li>
     <li class="card">
-      <div class="headline-title">Sensex, Nifty Open Volatile; India VIX Rises, Crude Above $116</div>
-      <div class="meta"><span>Source: HDFC Sky</span><span>Fri, 30 Oct 2026 05:13:04 GMT</span><span class="tone positive">positive</span></div>
+      <div class="headline-title">Sensex, Nifty trade flat as IT gains counter crude oil concerns</div>
+      <div class="meta"><span>Source: India Today</span><span>Fri, 30 Oct 2026 05:07:58 GMT</span><span class="tone positive">positive</span></div>
       <div class="impact">Who it helps or hurts: Oil moves matter most to importers, airlines and paint makers on one side and oil producers on the other.</div>
     </li>
     <li class="card">
-      <div class="headline-title">Sensex Jumps Over 1,100 Points as Finance Minister’s Tax Comments Lift Indian Markets</div>
-      <div class="meta"><span>Source: INDIA New England News</span><span>Fri, 30 Oct 2026 03:41:49 GMT</span><span class="tone positive">positive</span></div>
-      <div class="impact">Who it helps or hurts: The headline alone does not say who is helped or hurt.</div>
+      <div class="headline-title">Sensex, Nifty Open Volatile; India VIX Rises, Crude Above $116</div>
+      <div class="meta"><span>Source: HDFC Sky</span><span>Fri, 30 Oct 2026 05:13:04 GMT</span><span class="tone positive">positive</span></div>
+      <div class="impact">Who it helps or hurts: Oil moves matter most to importers, airlines and paint makers on one side and oil producers on the other.</div>
     </li>
     <li class="card">
       <div class="headline-title">Sensex Today Trades Flat | Nifty Below 22,950 | BSE Telecommunication Down 1.7%</div>
@@ -332,9 +440,9 @@
       <div class="impact">Who it helps or hurts: The headline alone does not say who is helped or hurt.</div>
     </li>
     <li class="card">
-      <div class="headline-title">Stock Market Today LIVE: GIFT Nifty signals quiet start; Brent crude at $111</div>
-      <div class="meta"><span>Source: IndiaIPO</span><span>Fri, 30 Oct 2026 02:31:21 GMT</span><span class="tone neutral">neutral</span></div>
-      <div class="impact">Who it helps or hurts: Oil moves matter most to importers, airlines and paint makers on one side and oil producers on the other.</div>
+      <div class="headline-title">Sensex zooms 1,500 pts in 2 days, Nifty tops 23K: Why are bulls in charge?</div>
+      <div class="meta"><span>Source: Business Standard</span><span>Fri, 30 Oct 2026 08:02:39 GMT</span><span class="tone neutral">neutral</span></div>
+      <div class="impact">Who it helps or hurts: The headline alone does not say who is helped or hurt.</div>
     </li>
   </ol>
   <p class="sub">Tone and the "helps or hurts" line are picked by simple keyword rules, not read by a person. Treat them as rough.</p>
@@ -343,10 +451,10 @@
 <section aria-label="Morning brief">
   <h2>Morning brief</h2>
   <div class="card brief">
-    <p>GIFT Nifty is at 23,129.00 against a Nifty 50 previous close of 22,936.75, an expected open of +192.25 points (gap-up).</p>
+    <p>GIFT Nifty is at 23,073.50 against a Nifty 50 previous close of 22,936.75, an expected open of +136.75 points (gap-up).</p>
     <p>Sensex closed at 74,151.04. India VIX closed at 15.12.</p>
     <p>Overnight in the US, the S&amp;P 500 moved -0.30%, the Nasdaq moved -1.38%, the Dow moved -0.25%.</p>
-    <p>USD/INR is at 95.0175 and Brent crude is at 112.47 dollars.</p>
+    <p>USD/INR is at 95.0200 and Brent crude is at 112.58 dollars.</p>
     <p>In the previous session FIIs were net sellers (-943.60 crore rupees) and DIIs were net buyers (+1,924.41 crore rupees).</p>
   </div>
 </section>
