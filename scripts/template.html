@@ -114,6 +114,10 @@
   .xp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
   .xp-cards .tile .value { font-size: 1.15rem; }
   .xp-chart { position: relative; margin-top: 14px; }
+  .tv-wrap { height: 440px; margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--bg); }
+  .tradingview-widget-copyright { font-size: 0.75rem; line-height: 24px; text-align: center; }
+  .tradingview-widget-copyright a { color: var(--s1); }
+  .xp .sub a { color: var(--s1); }
   .xp-chart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
   .xp-tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 0.8rem; white-space: nowrap; visibility: hidden; }
   .range-bar { position: relative; height: 8px; background: var(--line); border-radius: 4px; margin: 8px 0 4px; }
@@ -203,7 +207,7 @@ $tiles
 
 <section id="explorer" data-view="explorer" aria-label="Stock explorer">
   <h2>Stock explorer</h2>
-  <p class="sub">Look up any stock, index, currency or commodity below: $xp_summary. Prices are daily closes from Yahoo Finance for the last year, refreshed each weekday morning. Fundamentals such as P/E and market cap are not included.</p>
+  <p class="sub">Look up any stock, index, currency or commodity below: $xp_summary. Prices are daily closes from Yahoo Finance for the last year, refreshed each weekday morning. Fundamentals such as P/E and market cap are not included. A TradingView chart can be opened for each item; it loads from tradingview.com only when you choose it.</p>
   <div class="card">
     <noscript><div class="sub">The explorer needs JavaScript, which is switched off in this browser.</div></noscript>
     <div class="xp" id="xp-app" hidden>
@@ -234,7 +238,7 @@ $tiles
     }
     var KINDS = [['all', 'All'], ['stock', 'Stocks'], ['index', 'Indices'], ['currency', 'Currencies'], ['commodity', 'Commodities']];
     var RANGES = [[21, '1M'], [63, '3M'], [126, '6M'], [0, '1Y']];
-    var state = { kind: 'all', q: '', sel: 0, range: 0 };
+    var state = { kind: 'all', q: '', sel: 0, range: 0, view: 'own' };
     var W = 640, H = 260, L = 60, R = 12, T = 12, B = 26;
 
     function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
@@ -298,6 +302,28 @@ $tiles
       return { svg: out, ps: ps, ts: ts, x: x, y: y };
     }
 
+    function mountTradingView(it) {
+      var wrap = document.getElementById('tv-wrap');
+      var box = document.createElement('div');
+      box.className = 'tradingview-widget-container';
+      box.style.cssText = 'height:100%;width:100%';
+      var inner = document.createElement('div');
+      inner.className = 'tradingview-widget-container__widget';
+      inner.style.cssText = 'height:calc(100% - 24px);width:100%';
+      var credit = document.createElement('div');
+      credit.className = 'tradingview-widget-copyright';
+      credit.innerHTML = '<a href="https://www.tradingview.com/" rel="noopener nofollow noreferrer" target="_blank">Track all markets on TradingView</a>';
+      var script = document.createElement('script');
+      script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+      script.async = true;
+      script.text = JSON.stringify({
+        autosize: true, symbol: it.tv, interval: 'D', timezone: 'Asia/Kolkata', theme: 'dark', style: '1',
+        locale: 'en', allow_symbol_change: false, calendar: false, hide_side_toolbar: true, support_host: 'https://www.tradingview.com'
+      });
+      box.appendChild(inner); box.appendChild(credit); box.appendChild(script);
+      wrap.appendChild(box);
+    }
+
     function render() {
       var it = items[state.sel], s = stats(it), u = it.u, dp = it.dp;
       var chart = chartSvg(it, state.range);
@@ -305,11 +331,23 @@ $tiles
       var chips = RANGES.map(function (r) {
         return '<button type="button" class="chip" data-r="' + r[0] + '" aria-pressed="' + (state.range === r[0]) + '">' + r[1] + '</button>';
       }).join('');
+      var viewChips = [['own', 'Price chart'], ['tv', 'TradingView']].map(function (v) {
+        return '<button type="button" class="chip" data-v="' + v[0] + '" aria-pressed="' + (state.view === v[0]) + '">' + v[1] + '</button>';
+      }).join('');
+      var tvUrl = 'https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(it.tl);
+      var tvNote = it.k === 'stock' ? 'This shows the BSE listing, so prices can differ slightly from the NSE closes below.' :
+        it.k === 'index' ? 'Some indices use a closely tracking TradingView feed, so levels can differ slightly from the closes below.' :
+        'Its data can differ slightly from the closes below.';
+      var chartBlock = state.view === 'tv' ? (it.tv ?
+        '<div class="tv-wrap" id="tv-wrap"></div><p class="sub">Chart by TradingView, loaded from tradingview.com while this view is open. ' + tvNote +
+        ' <a href="' + esc(tvUrl) + '" target="_blank" rel="noopener noreferrer">Open ' + esc(it.s) + ' on TradingView</a>.</p>' :
+        '<div class="card"><p class="sub">TradingView does not allow ' + esc(it.s) + ' in embedded charts because the exchange restricts its data. ' +
+        '<a href="' + esc(tvUrl) + '" target="_blank" rel="noopener noreferrer">Open it on TradingView</a>, or use the Price chart view.</p></div>') :
+        '<div class="chips" id="xp-ranges">' + chips + '</div><div class="xp-chart">' + chart.svg + '<div class="xp-tip" id="xp-tip"></div></div>';
       detail.innerHTML =
         '<div class="xp-head"><div><h3>' + esc(it.n) + '</h3><div class="sub">' + esc(it.s) + ' &middot; as of ' + date(it.t[it.t.length - 1], true) + '</div></div>' +
         '<div><span class="xp-price">' + u + fmt(s.last, dp) + '</span> <span class="chg ' + cls(s.day) + '">' + pct(s.day) + ' today</span></div></div>' +
-        '<div class="chips" id="xp-ranges">' + chips + '</div>' +
-        '<div class="xp-chart">' + chart.svg + '<div class="xp-tip" id="xp-tip"></div></div>' +
+        '<div class="chips" id="xp-views" aria-label="Chart type">' + viewChips + '</div>' + chartBlock +
         '<div class="xp-cards">' +
         retCard('1 week', s.w1) + retCard('1 month', s.m1) + retCard('3 months', s.m3) + retCard('6 months', s.m6) +
         card(it.p.length > 250 ? '1 year' : 'Since ' + date(it.t[0], true), pct(s.y1), '', cls(s.y1)) +
@@ -321,6 +359,7 @@ $tiles
         card('Worst fall from a peak', s.dd.toFixed(1) + '%', 'Within the year shown', 'down') +
         card('Best day', pct(s.best), date(s.bestT, true), 'up') + card('Worst day', pct(s.worst), date(s.worstT, true), 'down') +
         '</div><p class="sub">Based on daily closing prices, so intraday highs and lows are not shown. Past prices do not predict future ones. For learning only.</p>';
+      if (state.view === 'tv') { if (it.tv) mountTradingView(it); return; }
       var svg = detail.querySelector('svg'), tip = document.getElementById('xp-tip');
       var mk = document.getElementById('xp-mk'), dot = document.getElementById('xp-dot');
       function move(e) {
@@ -375,7 +414,8 @@ $tiles
     });
     detail.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
-      state.range = parseInt(b.getAttribute('data-r'), 10); render();
+      if (b.hasAttribute('data-v')) { state.view = b.getAttribute('data-v'); render(); return; }
+      if (b.hasAttribute('data-r')) { state.range = parseInt(b.getAttribute('data-r'), 10); render(); }
     });
 
     function fromHash() {

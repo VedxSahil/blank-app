@@ -42,6 +42,15 @@ time, so it works on any static host but only covers this fixed list. P/E, marke
 fundamentals are not included because the free source does not provide them. The list is in
 `scripts/update_dashboard.py` and symbols Yahoo does not know are skipped.
 
+### TradingView charts in the explorer
+
+Each explorer item has a "Price chart" and a "TradingView" view. The TradingView view embeds
+TradingView's free advanced chart (candles, indicators, volume) and loads from tradingview.com
+only when you choose it, so nothing is requested from TradingView until then. The free embed
+refuses NSE data, so Indian stocks use their BSE listing, a few world indices use a closely
+tracking TradingView feed, and the Nifty 50, Nifty Bank, Nifty IT and India VIX show an
+"Open on TradingView" link instead. The symbol mapping is in `scripts/update_dashboard.py`.
+
 ## Strategy lab
 
 A learning calculator under the performance charts. A fixed rule screens the 30 Sensex stocks on
