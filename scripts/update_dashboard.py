@@ -28,9 +28,10 @@ NF = "not found"
 FLAT_BAND_PCT = 0.1  # within +/-0.1% of the Nifty close counts as flat
 SPARK_DAYS = 22  # about one month of trading days
 TOP_N = 8  # bars shown per top-performers chart
-# Sensex stocks, looked up on Yahoo Finance as BSE (.BO) listings. BSE's own website API
-# refuses scripted requests, so this fixed list may lag index changes; symbols Yahoo
-# does not know are skipped and the card says how many loaded.
+# Sensex stocks, priced from their NSE listings on Yahoo Finance (.NS). BSE's own website
+# API refuses scripted requests and Yahoo's BSE (.BO) history has gaps, so NSE prices are
+# used for the same companies. This fixed list may lag index changes; symbols Yahoo does
+# not know are skipped and the card says how many loaded.
 SENSEX_SYMBOLS = (
     "ADANIPORTS", "ASIANPAINT", "AXISBANK", "BAJAJFINSV", "BAJFINANCE", "BHARTIARTL", "ETERNAL",
     "HCLTECH", "HDFCBANK", "HINDUNILVR", "ICICIBANK", "INFY", "ITC", "KOTAKBANK", "LT",
@@ -196,23 +197,26 @@ def nse_gainers(limit=TOP_N):
                 continue
         rows.sort(key=lambda r: r["pct"], reverse=True)
         if rows:
-            out[key] = {"rows": rows[:limit], "source": "NSE India",
+            out[key] = {"rows": rows[:limit], "all": rows, "source": "NSE India",
                         "when": f"NSE timestamp {block.get('timestamp', NF)}"}
     return out or None
 
 
-def bse_sensex_gainers(limit=TOP_N):
+def sensex_gainers(nse, limit=TOP_N):
     """Top Sensex movers: last close versus the close of the trading day before it.
 
-    Yahoo's BSE histories often skip a day, which would inflate a gain, so a stock is
-    used only when its previous bar is the session right before the latest one (by the
-    Nifty calendar) or when it has a single bar and Yahoo gives the close before it.
+    A Sensex stock found in NSE's own gainers list uses that row. Others come from Yahoo,
+    whose histories can skip a day (which would inflate a gain), so a Yahoo row is used
+    only when its previous bar is the session right before the latest one (by the Nifty
+    calendar) or when it has a single bar and Yahoo gives the close before it.
     """
+    nse_rows = {r["symbol"]: r for r in ((nse or {}).get("NIFTY") or {}).get("all", [])
+                if r["symbol"] in SENSEX_SYMBOLS}
     _, nifty_bars = yahoo_bars("^NSEI")
     sessions = sorted({b[0] for b in nifty_bars})
     raw = {}
     for sym in SENSEX_SYMBOLS:
-        meta, bars = yahoo_bars(sym + ".BO")
+        meta, bars = yahoo_bars(sym + ".NS")
         if bars:
             raw[sym] = (meta, bars)
     if not raw or len(sessions) < 2:
@@ -223,6 +227,8 @@ def bse_sensex_gainers(limit=TOP_N):
     expected_prev = sessions[sessions.index(latest) - 1]
     found = []
     for sym, (meta, bars) in raw.items():
+        if sym in nse_rows:
+            continue
         if bars[-1][0] != latest:
             continue
         if len(bars) >= 2:
@@ -234,10 +240,11 @@ def bse_sensex_gainers(limit=TOP_N):
         if prev:
             price = bars[-1][1]
             found.append({"symbol": sym, "price": price, "prev": prev, "pct": pct_change(price, prev)})
+    found += list(nse_rows.values())
     if not found:
         return None
     found.sort(key=lambda r: r["pct"], reverse=True)
-    return {"rows": found[:limit], "source": "Yahoo Finance (BSE listings)",
+    return {"rows": found[:limit], "source": "NSE India, plus Yahoo Finance for stocks not in NSE's list",
             "when": f"{latest:%d %b %Y} vs close of {expected_prev:%d %b %Y}",
             "note": f"Only {len(found)} of {len(SENSEX_SYMBOLS)} Sensex stocks had complete data, "
                     "so this list may miss some movers." if len(found) < len(SENSEX_SYMBOLS)
@@ -405,7 +412,7 @@ def performers_html(nse, bse):
     nse = nse or {}
     return "\n".join([
         bar_chart("NSE · Nifty 50 top gainers", nse.get("NIFTY")),
-        bar_chart("BSE · Sensex top gainers", bse),
+        bar_chart("Sensex 30 · top gainers (NSE prices)", bse),
         bar_chart("NSE · all stocks top gainers", nse.get("allSec")),
     ])
 
@@ -478,7 +485,7 @@ def build(today):
     flows = fii_dii()
     news = headlines()
     nse_top = nse_gainers()
-    bse_top = bse_sensex_gainers()
+    bse_top = sensex_gainers(nse_top)
 
     # Expected open: GIFT Nifty minus Nifty previous close.
     if gift and nifty:
