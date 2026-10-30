@@ -22,6 +22,15 @@ For learning only. Not investment advice. Numbers can be wrong. Check them befor
 - Google News RSS: headlines. Tone and the "helps or hurts" line come from simple keyword
   rules, so they are rough.
 
+## Home page and top bar
+
+A bar pinned to the top has one tab per activity: Home, Markets, Stock explorer, Top performers,
+Strategy lab and News. Home explains the app, shows four key numbers for today, links to each
+activity and says how the page is built and what its limits are. Each tab has its own link
+(`#markets`, `#explorer`, `#performers`, `#lab`, `#news`), and a link like `#TCS` opens the
+explorer on that stock. With scripting switched off, every section shows on one page and the bar
+scrolls to each section.
+
 ## Stock explorer
 
 Search or filter about 120 items (roughly 100 large NSE stocks, 12 world and Indian indices,

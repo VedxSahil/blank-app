@@ -716,7 +716,7 @@ def build(today):
     flow_rows = [("FII net (₹ crore)", flow(flows["fii"]) if flows else NF),
                  ("DII net (₹ crore)", flow(flows["dii"]) if flows else NF)]
 
-    tiles = "\n".join([
+    tile_list = [
         tile("GIFT Nifty", gift, num(gift["value"]) if gift else ""),
         tile("Nifty 50 previous close", nifty, num(nifty["value"]) if nifty else ""),
         tile("Sensex previous close", sensex, num(sensex["value"]) if sensex else ""),
@@ -726,7 +726,10 @@ def build(today):
         rows_tile("US markets overnight", us_meta if us_found else None, us_rows),
         rows_tile("FII and DII net flows (previous session)", flows, flow_rows),
         exp_html,
-    ])
+    ]
+    tiles = "\n".join(tile_list)
+    # Home page shows GIFT Nifty, the Nifty close, USD/INR and the expected open.
+    glance = "\n".join(tile_list[i] for i in (0, 1, 8, 4))
 
     if news:
         items = []
@@ -771,7 +774,7 @@ def build(today):
     found = sum(x is not None for x in (gift, nifty, sensex, vix, usdinr, brent, flows)) + int(us_found)
     updated = now.strftime("%d %b %Y, %H:%M") + " IST"
     page = Template(TEMPLATE.read_text(encoding="utf-8")).substitute(
-        updated=esc(updated), tiles=tiles, headlines=headlines_html, brief=brief,
+        updated=esc(updated), tiles=tiles, glance=glance, headlines=headlines_html, brief=brief,
         history=history_html(history), performers=performers_html(nse_top, bse_top),
         lab_json=lab_json, lab_summary=esc(lab_summary),
         xp_json=xp_json, xp_summary=esc(xp_summary))
