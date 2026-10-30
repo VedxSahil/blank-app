@@ -108,6 +108,13 @@
   .xp-item:hover { background: var(--bg); }
   .xp-item[aria-pressed=true] { border-color: var(--s1); background: rgba(90,169,255,0.12); }
   .xp-item small { color: var(--muted); display: block; font-size: 0.75rem; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #xp-detail { scroll-margin-top: 70px; }
+  .xp-change { display: none; }
+  @media (max-width: 819px) {
+    #xp-detail { order: -1; }
+    .xp-list { max-height: 240px; }
+    .xp-change { display: inline-block; }
+  }
   .xp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; }
   .xp-head h3 { margin: 0; font-size: 1.1rem; }
   .xp-price { font-size: 1.8rem; font-weight: 700; }
@@ -207,7 +214,7 @@ $tiles
 
 <section id="explorer" data-view="explorer" aria-label="Stock explorer">
   <h2>Stock explorer</h2>
-  <p class="sub">Look up any stock, index, currency or commodity below: $xp_summary. Prices are daily closes from Yahoo Finance for the last year, refreshed each weekday morning. Fundamentals such as P/E and market cap are not included. A TradingView chart can be opened for each item; it loads from tradingview.com only when you choose it.</p>
+  <p class="sub">$xp_summary. Each item opens with a TradingView chart, which loads from tradingview.com while this tab is open. Choose "Price chart" for the built-in one.</p>
   <div class="card">
     <noscript><div class="sub">The explorer needs JavaScript, which is switched off in this browser.</div></noscript>
     <div class="xp" id="xp-app" hidden>
@@ -238,7 +245,7 @@ $tiles
     }
     var KINDS = [['all', 'All'], ['stock', 'Stocks'], ['index', 'Indices'], ['currency', 'Currencies'], ['commodity', 'Commodities']];
     var RANGES = [[21, '1M'], [63, '3M'], [126, '6M'], [0, '1Y']];
-    var state = { kind: 'all', q: '', sel: 0, range: 0, view: 'own' };
+    var state = { kind: 'all', q: '', sel: 0, range: 0, view: 'tv' };
     var W = 640, H = 260, L = 60, R = 12, T = 12, B = 26;
 
     function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
@@ -340,13 +347,15 @@ $tiles
         'Its data can differ slightly from the closes below.';
       var chartBlock = state.view === 'tv' ? (it.tv ?
         '<div class="tv-wrap" id="tv-wrap"></div><p class="sub">Chart by TradingView, loaded from tradingview.com while this view is open. ' + tvNote +
-        ' <a href="' + esc(tvUrl) + '" target="_blank" rel="noopener noreferrer">Open ' + esc(it.s) + ' on TradingView</a>.</p>' :
+        ' <a href="' + esc(tvUrl) + '" target="_blank" rel="noopener noreferrer">Open ' + esc(it.s) + ' on TradingView</a>. Chart blank? A content blocker or private browsing mode may be blocking tradingview.com.</p>' :
         '<div class="card"><p class="sub">TradingView does not allow ' + esc(it.s) + ' in embedded charts because the exchange restricts its data. ' +
-        '<a href="' + esc(tvUrl) + '" target="_blank" rel="noopener noreferrer">Open it on TradingView</a>, or use the Price chart view.</p></div>') :
+        '<a href="' + esc(tvUrl) + '" target="_blank" rel="noopener noreferrer">Open it on TradingView</a>. The built-in chart is shown below instead.</p></div>' +
+        '<div class="chips" id="xp-ranges">' + chips + '</div><div class="xp-chart">' + chart.svg + '<div class="xp-tip" id="xp-tip"></div></div>') :
         '<div class="chips" id="xp-ranges">' + chips + '</div><div class="xp-chart">' + chart.svg + '<div class="xp-tip" id="xp-tip"></div></div>';
       detail.innerHTML =
         '<div class="xp-head"><div><h3>' + esc(it.n) + '</h3><div class="sub">' + esc(it.s) + ' &middot; as of ' + date(it.t[it.t.length - 1], true) + '</div></div>' +
         '<div><span class="xp-price">' + u + fmt(s.last, dp) + '</span> <span class="chg ' + cls(s.day) + '">' + pct(s.day) + ' today</span></div></div>' +
+        '<button type="button" class="chip xp-change" data-change="1">Search another stock</button>' +
         '<div class="chips" id="xp-views" aria-label="Chart type">' + viewChips + '</div>' + chartBlock +
         '<div class="xp-cards">' +
         retCard('1 week', s.w1) + retCard('1 month', s.m1) + retCard('3 months', s.m3) + retCard('6 months', s.m6) +
@@ -358,8 +367,8 @@ $tiles
         card('Daily swing (3 months)', s.sd.toFixed(2) + '%', 'About ' + s.ann.toFixed(0) + '% a year') +
         card('Worst fall from a peak', s.dd.toFixed(1) + '%', 'Within the year shown', 'down') +
         card('Best day', pct(s.best), date(s.bestT, true), 'up') + card('Worst day', pct(s.worst), date(s.worstT, true), 'down') +
-        '</div><p class="sub">Based on daily closing prices, so intraday highs and lows are not shown. Past prices do not predict future ones. For learning only.</p>';
-      if (state.view === 'tv') { if (it.tv) mountTradingView(it); return; }
+        '</div><p class="sub">Statistics use daily closing prices from Yahoo Finance for the last year, refreshed each weekday morning, so intraday highs and lows are not shown. P/E, market cap and other fundamentals are not included. Past prices do not predict future ones. For learning only.</p>';
+      if (state.view === 'tv' && it.tv) { if (detail.offsetParent !== null) mountTradingView(it); return; }
       var svg = detail.querySelector('svg'), tip = document.getElementById('xp-tip');
       var mk = document.getElementById('xp-mk'), dot = document.getElementById('xp-dot');
       function move(e) {
@@ -411,9 +420,11 @@ $tiles
     listEl.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       select(parseInt(b.getAttribute('data-i'), 10));
+      if (window.innerWidth < 820) detail.scrollIntoView({ block: 'start' });
     });
     detail.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
+      if (b.hasAttribute('data-change')) { qBox.scrollIntoView({ block: 'center' }); qBox.focus(); return; }
       if (b.hasAttribute('data-v')) { state.view = b.getAttribute('data-v'); render(); return; }
       if (b.hasAttribute('data-r')) { state.range = parseInt(b.getAttribute('data-r'), 10); render(); }
     });
@@ -425,7 +436,8 @@ $tiles
       return found;
     }
     var start = fromHash();
-    if (start < 0) items.forEach(function (it, i) { if (it.s === 'Nifty 50') start = i; });
+    if (start < 0) items.forEach(function (it, i) { if (it.s === 'Sensex') start = i; });
+    window.xpShown = function () { var w = document.getElementById('tv-wrap'); if (state.view === 'tv' && w && !w.firstChild) render(); };
     window.xpHasSymbol = function (s) { return items.some(function (it) { return it.s === s; }); };
     renderChips();
     select(Math.max(start, 0), true);
@@ -588,6 +600,7 @@ $history
     }
     var active = document.querySelector('[data-nav="' + view + '"]');
     if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest', inline: 'center' });
+    if (view === 'explorer' && window.xpShown) window.xpShown();
     if (scroll) window.scrollTo(0, 0);
   }
   show(wanted() || 'home', false);
