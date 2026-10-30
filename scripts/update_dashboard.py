@@ -29,6 +29,8 @@ FLAT_BAND_PCT = 0.1  # within +/-0.1% of the Nifty close counts as flat
 SPARK_DAYS = 22  # about one month of trading days
 TOP_N = 8  # bars shown per top-performers chart
 LINE_N = 5  # stocks drawn on the one-month line graph
+LAB_MIN_BARS = 15  # a stock needs this many daily closes to be screened
+LAB_SHOWN = 10  # screened stocks offered in the strategy lab
 # Sensex stocks, priced from their NSE listings on Yahoo Finance (.NS). BSE's own website
 # API refuses scripted requests and Yahoo's BSE (.BO) history has gaps, so NSE prices are
 # used for the same companies. This fixed list may lag index changes; symbols Yahoo does
@@ -478,6 +480,39 @@ def line_graph(d):
             'price since then; the last point is the latest price. Source: Yahoo Finance (NSE listings).</div>\n    </div>')
 
 
+def strategy_lab():
+    """Rule-based screen of Sensex stocks on past prices, for the strategy lab.
+
+    Rules: rose over the window, latest close above its 10-day average, and ranked by
+    window return divided by daily volatility. This describes the past only.
+    """
+    stocks = []
+    for sym in SENSEX_SYMBOLS:
+        _, bars = yahoo_bars(sym + ".NS")
+        closes = [c for _, c, _ in bars]
+        if len(closes) < LAB_MIN_BARS:
+            continue
+        rets = [closes[i] / closes[i - 1] - 1 for i in range(1, len(closes))]
+        mean = sum(rets) / len(rets)
+        vol = (sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)) ** 0.5 * 100
+        stocks.append({"symbol": sym, "price": round(closes[-1], 2),
+                       "ret": round((closes[-1] / closes[0] - 1) * 100, 2), "vol": round(vol, 2),
+                       "above": closes[-1] > sum(closes[-10:]) / 10, "since": bars[0][0].isoformat()})
+    passing = [x for x in stocks if x["ret"] > 0 and x["above"] and x["vol"] > 0]
+    for x in passing:
+        x["score"] = round(x["ret"] / x["vol"], 2)
+    passing.sort(key=lambda x: x["score"], reverse=True)
+    for x in passing:
+        del x["above"]
+    return {"stocks": passing[:LAB_SHOWN], "checked": len(stocks), "universe": len(SENSEX_SYMBOLS)}
+
+
+def lab_html(lab):
+    blob = json.dumps(lab).replace("<", "\\u003c")
+    return blob, (f"{len(lab['stocks'])} of {lab['checked']} screened Sensex stocks passed the rules"
+                  if lab["checked"] else "Price history was not found")
+
+
 def performers_html(nse, bse):
     nse = nse or {}
     return "\n".join([
@@ -629,6 +664,8 @@ def build(today):
           if flows else "FII and DII flows for the previous session were not found.")
     brief = "\n".join(f"    <p>{esc(s)}</p>" for s in (s1, s2, s3, s4, s5))
 
+    lab_json, lab_summary = lab_html(strategy_lab())
+
     now = datetime.now(IST)
     history = update_history(load_history(), now, today, gift, nifty)
 
@@ -636,7 +673,8 @@ def build(today):
     updated = now.strftime("%d %b %Y, %H:%M") + " IST"
     page = Template(TEMPLATE.read_text(encoding="utf-8")).substitute(
         updated=esc(updated), tiles=tiles, headlines=headlines_html, brief=brief,
-        history=history_html(history), performers=performers_html(nse_top, bse_top))
+        history=history_html(history), performers=performers_html(nse_top, bse_top),
+        lab_json=lab_json, lab_summary=esc(lab_summary))
     return page, found, history
 
 
