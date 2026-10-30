@@ -333,10 +333,15 @@ $tiles
       var viewChips = [['own', 'Price chart'], ['tv', 'TradingView']].map(function (v) {
         return '<button type="button" class="chip" data-v="' + v[0] + '" aria-pressed="' + (state.view === v[0]) + '">' + v[1] + '</button>';
       }).join('');
-      var tvUrl = 'https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(it.tv);
-      var chartBlock = state.view === 'tv' ?
-        '<div class="tv-wrap" id="tv-wrap"></div><p class="sub">Chart by TradingView, loaded from tradingview.com while this view is open. ' +
-        '<a href="' + esc(tvUrl) + '" target="_blank" rel="noopener noreferrer">Open ' + esc(it.s) + ' on TradingView</a>. Its data can differ from the closing prices below.</p>' :
+      var tvUrl = 'https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(it.tl);
+      var tvNote = it.k === 'stock' ? 'This shows the BSE listing, so prices can differ slightly from the NSE closes below.' :
+        it.k === 'index' ? 'Some indices use a closely tracking TradingView feed, so levels can differ slightly from the closes below.' :
+        'Its data can differ slightly from the closes below.';
+      var chartBlock = state.view === 'tv' ? (it.tv ?
+        '<div class="tv-wrap" id="tv-wrap"></div><p class="sub">Chart by TradingView, loaded from tradingview.com while this view is open. ' + tvNote +
+        ' <a href="' + esc(tvUrl) + '" target="_blank" rel="noopener noreferrer">Open ' + esc(it.s) + ' on TradingView</a>.</p>' :
+        '<div class="card"><p class="sub">TradingView does not allow ' + esc(it.s) + ' in embedded charts because the exchange restricts its data. ' +
+        '<a href="' + esc(tvUrl) + '" target="_blank" rel="noopener noreferrer">Open it on TradingView</a>, or use the Price chart view.</p></div>') :
         '<div class="chips" id="xp-ranges">' + chips + '</div><div class="xp-chart">' + chart.svg + '<div class="xp-tip" id="xp-tip"></div></div>';
       detail.innerHTML =
         '<div class="xp-head"><div><h3>' + esc(it.n) + '</h3><div class="sub">' + esc(it.s) + ' &middot; as of ' + date(it.t[it.t.length - 1], true) + '</div></div>' +
@@ -353,7 +358,7 @@ $tiles
         card('Worst fall from a peak', s.dd.toFixed(1) + '%', 'Within the year shown', 'down') +
         card('Best day', pct(s.best), date(s.bestT, true), 'up') + card('Worst day', pct(s.worst), date(s.worstT, true), 'down') +
         '</div><p class="sub">Based on daily closing prices, so intraday highs and lows are not shown. Past prices do not predict future ones. For learning only.</p>';
-      if (state.view === 'tv') { mountTradingView(it); return; }
+      if (state.view === 'tv') { if (it.tv) mountTradingView(it); return; }
       var svg = detail.querySelector('svg'), tip = document.getElementById('xp-tip');
       var mk = document.getElementById('xp-mk'), dot = document.getElementById('xp-dot');
       function move(e) {

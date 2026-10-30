@@ -58,21 +58,30 @@ EXPLORER_STOCKS = (
     "PIDILITIND", "PNB", "RECLTD", "SHREECEM", "SIEMENS", "SWIGGY", "TATAPOWER", "TORNTPHARM",
     "TVSMOTOR", "UNITDSPR", "VBL", "VEDL", "ZYDUSLIFE",
 )
-# (kind, Yahoo symbol, label, unit prefix, decimals, TradingView symbol)
+# (kind, Yahoo symbol, label, unit prefix, decimals, TradingView link symbol, embed symbol)
+# TradingView's free embedded chart refuses NSE data, so embeds use BSE listings or stand-in
+# feeds; an empty embed symbol means the embed is refused and only a link is offered.
 EXPLORER_OTHERS = (
-    ("index", "^NSEI", "Nifty 50", "", 2, "NSE:NIFTY"), ("index", "^BSESN", "Sensex", "", 2, "BSE:SENSEX"),
-    ("index", "^NSEBANK", "Nifty Bank", "", 2, "NSE:BANKNIFTY"), ("index", "^CNXIT", "Nifty IT", "", 2, "NSE:CNXIT"),
-    ("index", "^INDIAVIX", "India VIX", "", 2, "NSE:INDIAVIX"), ("index", "^GSPC", "S&P 500", "", 2, "SP:SPX"),
-    ("index", "^IXIC", "Nasdaq Composite", "", 2, "NASDAQ:IXIC"), ("index", "^DJI", "Dow Jones", "", 2, "DJ:DJI"),
-    ("index", "^N225", "Nikkei 225", "", 2, "TVC:NI225"), ("index", "^HSI", "Hang Seng", "", 2, "TVC:HSI"),
-    ("index", "^FTSE", "FTSE 100", "", 2, "TVC:UKX"), ("index", "^GDAXI", "DAX", "", 2, "XETR:DAX"),
-    ("currency", "INR=X", "USD/INR", "₹", 4, "FX_IDC:USDINR"), ("currency", "EURINR=X", "EUR/INR", "₹", 4, "FX_IDC:EURINR"),
-    ("currency", "GBPINR=X", "GBP/INR", "₹", 4, "FX_IDC:GBPINR"), ("currency", "JPYINR=X", "JPY/INR", "₹", 4, "FX_IDC:JPYINR"),
-    ("currency", "AEDINR=X", "AED/INR", "₹", 4, "FX_IDC:AEDINR"),
-    ("commodity", "BZ=F", "Brent crude (USD/barrel)", "$", 2, "TVC:UKOIL"),
-    ("commodity", "CL=F", "WTI crude (USD/barrel)", "$", 2, "TVC:USOIL"),
-    ("commodity", "GC=F", "Gold (USD/oz)", "$", 2, "TVC:GOLD"), ("commodity", "SI=F", "Silver (USD/oz)", "$", 2, "TVC:SILVER"),
-    ("commodity", "NG=F", "Natural gas (USD/MMBtu)", "$", 3, "NYMEX:NG1!"),
+    ("index", "^NSEI", "Nifty 50", "", 2, "NSE:NIFTY", ""), ("index", "^BSESN", "Sensex", "", 2, "BSE:SENSEX", "BSE:SENSEX"),
+    ("index", "^NSEBANK", "Nifty Bank", "", 2, "NSE:BANKNIFTY", ""), ("index", "^CNXIT", "Nifty IT", "", 2, "NSE:CNXIT", ""),
+    ("index", "^INDIAVIX", "India VIX", "", 2, "NSE:INDIAVIX", ""),
+    ("index", "^GSPC", "S&P 500", "", 2, "SP:SPX", "FOREXCOM:SPXUSD"),
+    ("index", "^IXIC", "Nasdaq Composite", "", 2, "NASDAQ:IXIC", "FOREXCOM:NSXUSD"),
+    ("index", "^DJI", "Dow Jones", "", 2, "DJ:DJI", "FOREXCOM:DJI"),
+    ("index", "^N225", "Nikkei 225", "", 2, "TVC:NI225", "OANDA:JP225USD"),
+    ("index", "^HSI", "Hang Seng", "", 2, "TVC:HSI", "FOREXCOM:HKXHKD"),
+    ("index", "^FTSE", "FTSE 100", "", 2, "TVC:UKX", "FOREXCOM:UKXGBP"),
+    ("index", "^GDAXI", "DAX", "", 2, "XETR:DAX", "XETR:DAX"),
+    ("currency", "INR=X", "USD/INR", "₹", 4, "FX_IDC:USDINR", "FX_IDC:USDINR"),
+    ("currency", "EURINR=X", "EUR/INR", "₹", 4, "FX_IDC:EURINR", "FX_IDC:EURINR"),
+    ("currency", "GBPINR=X", "GBP/INR", "₹", 4, "FX_IDC:GBPINR", "FX_IDC:GBPINR"),
+    ("currency", "JPYINR=X", "JPY/INR", "₹", 4, "FX_IDC:JPYINR", "FX_IDC:JPYINR"),
+    ("currency", "AEDINR=X", "AED/INR", "₹", 4, "FX_IDC:AEDINR", "FX_IDC:AEDINR"),
+    ("commodity", "BZ=F", "Brent crude (USD/barrel)", "$", 2, "TVC:UKOIL", "TVC:UKOIL"),
+    ("commodity", "CL=F", "WTI crude (USD/barrel)", "$", 2, "TVC:USOIL", "TVC:USOIL"),
+    ("commodity", "GC=F", "Gold (USD/oz)", "$", 2, "TVC:GOLD", "TVC:GOLD"),
+    ("commodity", "SI=F", "Silver (USD/oz)", "$", 2, "TVC:SILVER", "TVC:SILVER"),
+    ("commodity", "NG=F", "Natural gas (USD/MMBtu)", "$", 3, "NYMEX:NG1!", "OANDA:NATGASUSD"),
 )
 HISTORY_KEEP = 60
 HISTORY_SHOWN = 10
@@ -550,18 +559,18 @@ def yahoo_year(symbol):
 def explorer_data():
     """Year of daily closes for every stock, index, currency and commodity in the explorer."""
     # TradingView writes "&" and "-" in NSE tickers as "_" (M_M, BAJAJ_AUTO).
-    entries = [("stock", sym + ".NS", sym, "₹", 2, "NSE:" + sym.replace("&", "_").replace("-", "_"))
-               for sym in EXPLORER_STOCKS] + list(EXPLORER_OTHERS)
+    entries = [("stock", sym + ".NS", sym, "₹", 2, "NSE:" + sym.replace("&", "_").replace("-", "_"),
+                "BSE:" + sym.replace("&", "_").replace("-", "_")) for sym in EXPLORER_STOCKS] + list(EXPLORER_OTHERS)
     epoch = datetime(1970, 1, 1).date()
     items = []
-    for kind, ysym, label, unit, dp, tv in entries:
+    for kind, ysym, label, unit, dp, tv_link, tv_embed in entries:
         meta, bars = yahoo_year(ysym)
         if len(bars) < 30:
             continue
         name = label
         if kind == "stock":
             name = (meta or {}).get("longName") or (meta or {}).get("shortName") or label
-        items.append({"k": kind, "s": label, "n": name, "u": unit, "dp": dp, "tv": tv,
+        items.append({"k": kind, "s": label, "n": name, "u": unit, "dp": dp, "tl": tv_link, "tv": tv_embed,
                       "t": [(d - epoch).days for d, _ in bars],
                       "p": [round(c, 4 if dp > 2 else 2) for _, c in bars]})
     return {"items": items, "wanted": len(entries)}
