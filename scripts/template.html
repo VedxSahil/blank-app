@@ -58,6 +58,14 @@
   table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
   th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
   th { color: var(--muted); font-weight: 500; font-size: 0.8rem; }
+  .perf-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 12px; }
+  .perf { display: grid; gap: 10px; align-content: start; }
+  .perf h3 { margin: 0; font-size: 0.95rem; }
+  .bar-row { display: grid; gap: 3px; }
+  .bar-head { display: flex; justify-content: space-between; gap: 8px; font-size: 0.9rem; }
+  .bar-sym { font-weight: 600; overflow-wrap: anywhere; }
+  .bar-track { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 5px; background: currentColor; }
   footer { margin: 32px 0 16px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
@@ -72,6 +80,14 @@
 <section aria-label="Key numbers">
   <div class="grid">
 $tiles
+  </div>
+</section>
+
+<section aria-label="Top performers">
+  <h2>Top performers</h2>
+  <p class="sub">Gain is measured from each stock's previous close, for the latest session. The all-stocks list includes small, thinly traded companies that can jump 10-20% on very little volume.</p>
+  <div class="grid perf-grid">
+$performers
   </div>
 </section>
 
