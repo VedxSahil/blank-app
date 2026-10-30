@@ -153,7 +153,9 @@ $tiles
     var node = document.getElementById('xp-data');
     var root = document.getElementById('xp-app');
     if (!node || !root) return;
-    var items = JSON.parse(node.textContent).items;
+    var ORDER = { index: 0, currency: 1, commodity: 2, stock: 3 };
+    var items = JSON.parse(node.textContent).items.map(function (it, i) { it.o = i; return it; });
+    items.sort(function (a, b) { return (ORDER[a.k] - ORDER[b.k]) || (a.o - b.o); });
     var qBox = document.getElementById('xp-q'), listEl = document.getElementById('xp-list');
     var chipsEl = document.getElementById('xp-chips'), detail = document.getElementById('xp-detail');
     root.hidden = false;
@@ -307,12 +309,20 @@ $tiles
       state.range = parseInt(b.getAttribute('data-r'), 10); render();
     });
 
-    var start = 0, wanted = '';
-    try { wanted = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
-    items.forEach(function (it, i) { if (wanted && it.s === wanted) start = i; });
-    if (!wanted) items.forEach(function (it, i) { if (it.s === 'Nifty 50') start = i; });
+    function fromHash() {
+      var wanted = '', found = -1;
+      try { wanted = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
+      items.forEach(function (it, i) { if (wanted && it.s === wanted) found = i; });
+      return found;
+    }
+    var start = fromHash();
+    if (start < 0) items.forEach(function (it, i) { if (it.s === 'Nifty 50') start = i; });
     renderChips();
-    select(start, true);
+    select(Math.max(start, 0), true);
+    window.addEventListener('hashchange', function () {
+      var i = fromHash();
+      if (i >= 0 && i !== state.sel) select(i, true);
+    });
   })();
   </script>
 </section>

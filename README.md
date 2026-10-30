@@ -22,6 +22,17 @@ For learning only. Not investment advice. Numbers can be wrong. Check them befor
 - Google News RSS: headlines. Tone and the "helps or hurts" line come from simple keyword
   rules, so they are rough.
 
+## Stock explorer
+
+Search or filter about 120 items (roughly 100 large NSE stocks, 12 world and Indian indices,
+5 rupee exchange rates and 5 commodities) and open one to see its price, 1-week to 1-year
+changes, a 1M/3M/6M/1Y chart with a hover readout, the year's closing range, distance from the
+50-day average, volatility, worst fall and best and worst days. A link like `#TCS` opens a
+given item. Data is one year of daily closes from Yahoo Finance, embedded in the page at build
+time, so it works on any static host but only covers this fixed list. P/E, market cap and other
+fundamentals are not included because the free source does not provide them. The list is in
+`scripts/update_dashboard.py` and symbols Yahoo does not know are skipped.
+
 ## Strategy lab
 
 A learning calculator under the performance charts. A fixed rule screens the 30 Sensex stocks on
