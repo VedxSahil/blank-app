@@ -91,6 +91,30 @@
   .lab-cards .tile .value { font-size: 1.25rem; }
   .warn { border-color: var(--neg); color: var(--text); font-size: 0.9rem; }
   .rules { margin: 0; padding-left: 1.2em; font-size: 0.9rem; color: var(--muted); }
+  .xp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .xp > * { min-width: 0; }
+  @media (min-width: 820px) { .xp { grid-template-columns: 300px minmax(0, 1fr); } }
+  .xp input[type=search] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 1rem; }
+  .xp input:focus-visible, .xp button:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .chip { background: none; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 0.85rem; cursor: pointer; }
+  .chip[aria-pressed=true] { color: var(--text); border-color: var(--s1); background: rgba(90,169,255,0.12); }
+  .xp-list { max-height: 320px; overflow-y: auto; display: grid; gap: 2px; align-content: start; }
+  @media (min-width: 820px) { .xp-list { max-height: 520px; } }
+  .xp-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; text-align: left; background: none; color: var(--text); border: 1px solid transparent; border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 0.9rem; cursor: pointer; }
+  .xp-item:hover { background: var(--bg); }
+  .xp-item[aria-pressed=true] { border-color: var(--s1); background: rgba(90,169,255,0.12); }
+  .xp-item small { color: var(--muted); display: block; font-size: 0.75rem; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .xp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; }
+  .xp-head h3 { margin: 0; font-size: 1.1rem; }
+  .xp-price { font-size: 1.8rem; font-weight: 700; }
+  .xp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+  .xp-cards .tile .value { font-size: 1.15rem; }
+  .xp-chart { position: relative; margin-top: 14px; }
+  .xp-chart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+  .xp-tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 0.8rem; white-space: nowrap; visibility: hidden; }
+  .range-bar { position: relative; height: 8px; background: var(--line); border-radius: 4px; margin: 8px 0 4px; }
+  .range-bar i { position: absolute; top: -3px; width: 4px; height: 14px; background: var(--text); border-radius: 2px; }
   footer { margin: 32px 0 16px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
@@ -106,6 +130,201 @@
   <div class="grid">
 $tiles
   </div>
+</section>
+
+<section aria-label="Stock explorer">
+  <h2>Stock explorer</h2>
+  <p class="sub">Look up any stock, index, currency or commodity below: $xp_summary. Prices are daily closes from Yahoo Finance for the last year, refreshed each weekday morning. Fundamentals such as P/E and market cap are not included.</p>
+  <div class="card">
+    <noscript><div class="sub">The explorer needs JavaScript, which is switched off in this browser.</div></noscript>
+    <div class="xp" id="xp-app" hidden>
+      <div>
+        <label class="sub" for="xp-q">Search by symbol or name</label>
+        <input id="xp-q" type="search" placeholder="e.g. TCS, gold, USD" autocomplete="off">
+        <div class="chips" id="xp-chips"></div>
+        <div class="xp-list" id="xp-list"></div>
+      </div>
+      <div id="xp-detail" aria-live="polite"></div>
+    </div>
+  </div>
+  <script type="application/json" id="xp-data">$xp_json</script>
+  <script>
+  (function () {
+    var node = document.getElementById('xp-data');
+    var root = document.getElementById('xp-app');
+    if (!node || !root) return;
+    var ORDER = { index: 0, currency: 1, commodity: 2, stock: 3 };
+    var items = JSON.parse(node.textContent).items.map(function (it, i) { it.o = i; return it; });
+    items.sort(function (a, b) { return (ORDER[a.k] - ORDER[b.k]) || (a.o - b.o); });
+    var qBox = document.getElementById('xp-q'), listEl = document.getElementById('xp-list');
+    var chipsEl = document.getElementById('xp-chips'), detail = document.getElementById('xp-detail');
+    root.hidden = false;
+    if (!items.length) {
+      root.innerHTML = '<div class="sub">Price data was not found in this build.</div>';
+      return;
+    }
+    var KINDS = [['all', 'All'], ['stock', 'Stocks'], ['index', 'Indices'], ['currency', 'Currencies'], ['commodity', 'Commodities']];
+    var RANGES = [[21, '1M'], [63, '3M'], [126, '6M'], [0, '1Y']];
+    var state = { kind: 'all', q: '', sel: 0, range: 0 };
+    var W = 640, H = 260, L = 60, R = 12, T = 12, B = 26;
+
+    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+    function fmt(x, dp) { return x.toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp }); }
+    function pct(x) { return (x > 0 ? '+' : '') + x.toFixed(2) + '%'; }
+    function cls(x) { return x > 0 ? 'up' : x < 0 ? 'down' : 'flat'; }
+    function date(d, withYear) {
+      return new Date(d * 86400000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: withYear ? 'numeric' : undefined, timeZone: 'UTC' });
+    }
+    function dayChange(it) { var p = it.p, n = p.length; return (p[n - 1] / p[n - 2] - 1) * 100; }
+
+    function stats(it) {
+      var p = it.p, n = p.length, last = p[n - 1], i, rets = [], hi = -Infinity, lo = Infinity, peak = p[0], dd = 0;
+      for (i = 1; i < n; i++) rets.push(p[i] / p[i - 1] - 1);
+      for (i = 0; i < n; i++) {
+        hi = Math.max(hi, p[i]); lo = Math.min(lo, p[i]);
+        peak = Math.max(peak, p[i]); dd = Math.min(dd, (p[i] / peak - 1) * 100);
+      }
+      var recent = rets.slice(-63), mean = 0, v = 0;
+      recent.forEach(function (r) { mean += r; }); mean /= recent.length;
+      recent.forEach(function (r) { v += (r - mean) * (r - mean); });
+      var sd = Math.sqrt(v / Math.max(recent.length - 1, 1)) * 100;
+      var bi = 0, wi = 0;
+      rets.forEach(function (r, k) { if (r > rets[bi]) bi = k; if (r < rets[wi]) wi = k; });
+      var avg50 = null;
+      if (n >= 50) { avg50 = 0; for (i = n - 50; i < n; i++) avg50 += p[i]; avg50 /= 50; }
+      function ret(k) { return n > k ? (last / p[n - 1 - k] - 1) * 100 : null; }
+      return { last: last, day: ret(1), w1: ret(5), m1: ret(21), m3: ret(63), m6: ret(126), y1: (last / p[0] - 1) * 100,
+               hi: hi, lo: lo, dd: dd, sd: sd, ann: sd * Math.sqrt(252), avg50: avg50,
+               best: rets[bi] * 100, bestT: it.t[bi + 1], worst: rets[wi] * 100, worstT: it.t[wi + 1] };
+    }
+
+    function card(label, value, sub, c) {
+      return '<div class="tile"><div class="label">' + label + '</div><div class="value ' + (c || '') + '">' + value +
+        '</div><div class="sub">' + (sub || '') + '</div></div>';
+    }
+    function retCard(label, v) { return card(label, v === null ? 'not found' : pct(v), '', v === null ? '' : cls(v)); }
+
+    function chartSvg(it, n) {
+      var len = it.p.length, from = n && n < len ? len - 1 - n : 0;
+      var ps = it.p.slice(from), ts = it.t.slice(from), lo = Math.min.apply(null, ps), hi = Math.max.apply(null, ps);
+      var padv = (hi - lo) * 0.06 || 1; lo -= padv; hi += padv;
+      var out = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Price chart for ' + esc(it.n) + '">', i;
+      function x(k) { return L + k * (W - L - R) / (ps.length - 1); }
+      function y(v) { return T + (hi - v) / (hi - lo) * (H - T - B); }
+      for (i = 0; i <= 4; i++) {
+        var gv = lo + (hi - lo) * i / 4, gy = y(gv);
+        out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy.toFixed(1) + '" y2="' + gy.toFixed(1) + '" class="grid-line"/>' +
+          '<text x="' + (L - 6) + '" y="' + (gy + 4).toFixed(1) + '" text-anchor="end" class="axis">' + fmt(gv, it.dp > 2 ? 2 : (hi - lo < 20 ? 2 : 0)) + '</text>';
+      }
+      var mid = Math.floor((ps.length - 1) / 2);
+      out += '<text x="' + L + '" y="' + (H - 8) + '" class="axis">' + date(ts[0], true) + '</text>' +
+        '<text x="' + x(mid).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" class="axis">' + date(ts[mid], false) + '</text>' +
+        '<text x="' + (W - R) + '" y="' + (H - 8) + '" text-anchor="end" class="axis">' + date(ts[ts.length - 1], true) + '</text>';
+      var pts = ps.map(function (v, k) { return x(k).toFixed(1) + ',' + y(v).toFixed(1); }).join(' ');
+      var c = ps[ps.length - 1] >= ps[0] ? 'up' : 'down';
+      out += '<g class="' + c + '"><polygon points="' + L + ',' + (H - B) + ' ' + pts + ' ' + (W - R) + ',' + (H - B) +
+        '" fill="currentColor" opacity="0.14"/><polyline points="' + pts + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></g>' +
+        '<line id="xp-mk" x1="0" x2="0" y1="' + T + '" y2="' + (H - B) + '" class="grid-line zero" visibility="hidden"/>' +
+        '<circle id="xp-dot" r="4" fill="var(--text)" visibility="hidden"/></svg>';
+      return { svg: out, ps: ps, ts: ts, x: x, y: y };
+    }
+
+    function render() {
+      var it = items[state.sel], s = stats(it), u = it.u, dp = it.dp;
+      var chart = chartSvg(it, state.range);
+      var span = s.hi - s.lo, posn = span ? (s.last - s.lo) / span * 100 : 50;
+      var chips = RANGES.map(function (r) {
+        return '<button type="button" class="chip" data-r="' + r[0] + '" aria-pressed="' + (state.range === r[0]) + '">' + r[1] + '</button>';
+      }).join('');
+      detail.innerHTML =
+        '<div class="xp-head"><div><h3>' + esc(it.n) + '</h3><div class="sub">' + esc(it.s) + ' &middot; as of ' + date(it.t[it.t.length - 1], true) + '</div></div>' +
+        '<div><span class="xp-price">' + u + fmt(s.last, dp) + '</span> <span class="chg ' + cls(s.day) + '">' + pct(s.day) + ' today</span></div></div>' +
+        '<div class="chips" id="xp-ranges">' + chips + '</div>' +
+        '<div class="xp-chart">' + chart.svg + '<div class="xp-tip" id="xp-tip"></div></div>' +
+        '<div class="xp-cards">' +
+        retCard('1 week', s.w1) + retCard('1 month', s.m1) + retCard('3 months', s.m3) + retCard('6 months', s.m6) +
+        card(it.p.length > 250 ? '1 year' : 'Since ' + date(it.t[0], true), pct(s.y1), '', cls(s.y1)) +
+        card('Year range (closes)', u + fmt(s.lo, dp) + ' to ' + u + fmt(s.hi, dp),
+          '<div class="range-bar" role="img" aria-label="Price is ' + posn.toFixed(0) + ' percent of the way from the low to the high"><i style="left:calc(' + posn.toFixed(1) + '% - 2px)"></i></div>' + posn.toFixed(0) + '% of the way up') +
+        card('Vs 50-day average', s.avg50 === null ? 'not found' : pct((s.last / s.avg50 - 1) * 100), s.avg50 === null ? '' : 'Average ' + u + fmt(s.avg50, dp),
+          s.avg50 === null ? '' : cls(s.last - s.avg50)) +
+        card('Daily swing (3 months)', s.sd.toFixed(2) + '%', 'About ' + s.ann.toFixed(0) + '% a year') +
+        card('Worst fall from a peak', s.dd.toFixed(1) + '%', 'Within the year shown', 'down') +
+        card('Best day', pct(s.best), date(s.bestT, true), 'up') + card('Worst day', pct(s.worst), date(s.worstT, true), 'down') +
+        '</div><p class="sub">Based on daily closing prices, so intraday highs and lows are not shown. Past prices do not predict future ones. For learning only.</p>';
+      var svg = detail.querySelector('svg'), tip = document.getElementById('xp-tip');
+      var mk = document.getElementById('xp-mk'), dot = document.getElementById('xp-dot');
+      function move(e) {
+        var r = svg.getBoundingClientRect(), vx = (e.clientX - r.left) / r.width * W;
+        var k = Math.round((vx - L) / (W - L - R) * (chart.ps.length - 1));
+        k = Math.max(0, Math.min(chart.ps.length - 1, k));
+        var px = chart.x(k), py = chart.y(chart.ps[k]);
+        mk.setAttribute('x1', px); mk.setAttribute('x2', px); dot.setAttribute('cx', px); dot.setAttribute('cy', py);
+        mk.setAttribute('visibility', 'visible'); dot.setAttribute('visibility', 'visible');
+        tip.textContent = date(chart.ts[k], true) + '  ' + u + fmt(chart.ps[k], dp);
+        tip.style.visibility = 'visible';
+        var left = px / W * r.width + 10;
+        tip.style.left = Math.min(left, r.width - tip.offsetWidth - 4) + 'px';
+        tip.style.top = (py / H * r.height - 30) + 'px';
+      }
+      function leave() { mk.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); tip.style.visibility = 'hidden'; }
+      svg.addEventListener('pointermove', move);
+      svg.addEventListener('pointerleave', leave);
+    }
+
+    function renderList() {
+      var q = state.q.toLowerCase(), html = '', shown = 0;
+      items.forEach(function (it, i) {
+        if (state.kind !== 'all' && it.k !== state.kind) return;
+        if (q && it.s.toLowerCase().indexOf(q) < 0 && it.n.toLowerCase().indexOf(q) < 0) return;
+        var d = dayChange(it);
+        shown++;
+        html += '<button type="button" class="xp-item" data-i="' + i + '" aria-pressed="' + (i === state.sel) + '"><span><b>' + esc(it.s) +
+          '</b><small>' + esc(it.n) + '</small></span><span class="chg ' + cls(d) + '">' + pct(d) + '</span></button>';
+      });
+      listEl.innerHTML = shown ? html : '<div class="sub">No match. Try another name, or a different group.</div>';
+    }
+    function renderChips() {
+      chipsEl.innerHTML = KINDS.map(function (k) {
+        return '<button type="button" class="chip" data-k="' + k[0] + '" aria-pressed="' + (state.kind === k[0]) + '">' + k[1] + '</button>';
+      }).join('');
+    }
+    function select(i, keepHash) {
+      state.sel = i;
+      renderList(); render();
+      if (!keepHash) { try { history.replaceState(null, '', '#' + encodeURIComponent(items[i].s)); } catch (e) {} }
+    }
+
+    qBox.addEventListener('input', function () { state.q = qBox.value; renderList(); });
+    chipsEl.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      state.kind = b.getAttribute('data-k'); renderChips(); renderList();
+    });
+    listEl.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      select(parseInt(b.getAttribute('data-i'), 10));
+    });
+    detail.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      state.range = parseInt(b.getAttribute('data-r'), 10); render();
+    });
+
+    function fromHash() {
+      var wanted = '', found = -1;
+      try { wanted = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
+      items.forEach(function (it, i) { if (wanted && it.s === wanted) found = i; });
+      return found;
+    }
+    var start = fromHash();
+    if (start < 0) items.forEach(function (it, i) { if (it.s === 'Nifty 50') start = i; });
+    renderChips();
+    select(Math.max(start, 0), true);
+    window.addEventListener('hashchange', function () {
+      var i = fromHash();
+      if (i >= 0 && i !== state.sel) select(i, true);
+    });
+  })();
+  </script>
 </section>
 
 <section aria-label="Top performers">

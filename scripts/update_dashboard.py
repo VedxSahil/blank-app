@@ -41,6 +41,38 @@ SENSEX_SYMBOLS = (
     "M&M", "MARUTI", "NESTLEIND", "NTPC", "POWERGRID", "RELIANCE", "SBIN", "SUNPHARMA", "TATASTEEL",
     "TCS", "TECHM", "TITAN", "TMPV", "TRENT", "ULTRACEMCO",
 )
+# Stock explorer universe. NSE symbols are looked up on Yahoo Finance as .NS; any symbol Yahoo
+# does not know is skipped, and the page says how many loaded.
+EXPLORER_STOCKS = (
+    "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ-AUTO", "BAJFINANCE",
+    "BAJAJFINSV", "BEL", "BHARTIARTL", "CIPLA", "COALINDIA", "DRREDDY", "EICHERMOT", "ETERNAL",
+    "GRASIM", "HCLTECH", "HDFCBANK", "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR", "ICICIBANK",
+    "INDIGO", "INDUSINDBK", "INFY", "ITC", "JIOFIN", "JSWSTEEL", "KOTAKBANK", "LT", "M&M", "MARUTI",
+    "NESTLEIND", "NTPC", "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN", "SHRIRAMFIN",
+    "SUNPHARMA", "TATACONSUM", "TATASTEEL", "TCS", "TECHM", "TITAN", "TMPV", "TRENT", "ULTRACEMCO",
+    "WIPRO",
+    "ABB", "ADANIENSOL", "ADANIGREEN", "ADANIPOWER", "AMBUJACEM", "BANKBARODA", "BOSCHLTD",
+    "BRITANNIA", "CANBK", "CGPOWER", "CHOLAFIN", "DABUR", "DIVISLAB", "DLF", "DMART", "GAIL",
+    "GODREJCP", "HAVELLS", "HAL", "HINDZINC", "ICICIGI", "ICICIPRULI", "IOC", "IRFC", "JINDALSTEL",
+    "JSWENERGY", "LICI", "LODHA", "LTIM", "MARICO", "MAZDOCK", "MOTHERSON", "NAUKRI", "PFC",
+    "PIDILITIND", "PNB", "RECLTD", "SHREECEM", "SIEMENS", "SWIGGY", "TATAPOWER", "TORNTPHARM",
+    "TVSMOTOR", "UNITDSPR", "VBL", "VEDL", "ZYDUSLIFE",
+)
+# (kind, Yahoo symbol, label, unit prefix, decimals)
+EXPLORER_OTHERS = (
+    ("index", "^NSEI", "Nifty 50", "", 2), ("index", "^BSESN", "Sensex", "", 2),
+    ("index", "^NSEBANK", "Nifty Bank", "", 2), ("index", "^CNXIT", "Nifty IT", "", 2),
+    ("index", "^INDIAVIX", "India VIX", "", 2), ("index", "^GSPC", "S&P 500", "", 2),
+    ("index", "^IXIC", "Nasdaq Composite", "", 2), ("index", "^DJI", "Dow Jones", "", 2),
+    ("index", "^N225", "Nikkei 225", "", 2), ("index", "^HSI", "Hang Seng", "", 2),
+    ("index", "^FTSE", "FTSE 100", "", 2), ("index", "^GDAXI", "DAX", "", 2),
+    ("currency", "INR=X", "USD/INR", "₹", 4), ("currency", "EURINR=X", "EUR/INR", "₹", 4),
+    ("currency", "GBPINR=X", "GBP/INR", "₹", 4), ("currency", "JPYINR=X", "JPY/INR", "₹", 4),
+    ("currency", "AEDINR=X", "AED/INR", "₹", 4),
+    ("commodity", "BZ=F", "Brent crude (USD/barrel)", "$", 2), ("commodity", "CL=F", "WTI crude (USD/barrel)", "$", 2),
+    ("commodity", "GC=F", "Gold (USD/oz)", "$", 2), ("commodity", "SI=F", "Silver (USD/oz)", "$", 2),
+    ("commodity", "NG=F", "Natural gas (USD/MMBtu)", "$", 3),
+)
 HISTORY_KEEP = 60
 HISTORY_SHOWN = 10
 PRE_OPEN = dtime(9, 15)  # only runs before this time (IST) are recorded as predictions
@@ -480,6 +512,52 @@ def line_graph(d):
             'price since then; the last point is the latest price. Source: Yahoo Finance (NSE listings).</div>\n    </div>')
 
 
+_YEAR_CACHE = {}
+
+
+def yahoo_year(symbol):
+    """One year of daily closes: (meta, [(date_in_exchange_tz, close), ...])."""
+    if symbol not in _YEAR_CACHE:
+        url = ("https://query1.finance.yahoo.com/v8/finance/chart/"
+               + urllib.parse.quote(symbol) + "?range=1y&interval=1d")
+        time.sleep(0.5)
+        raw, out = fetch(url), (None, [])
+        if raw:
+            try:
+                result = json.loads(raw)["chart"]["result"][0]
+                tz = timezone(timedelta(seconds=result["meta"].get("gmtoffset", 0)))
+                closes = result["indicators"]["quote"][0]["close"]
+                out = (result["meta"], [(datetime.fromtimestamp(t, tz).date(), c)
+                                        for t, c in zip(result["timestamp"], closes) if c is not None])
+            except (KeyError, IndexError, TypeError, ValueError) as exc:
+                print(f"  bad Yahoo data for {symbol}: {exc}", file=sys.stderr)
+        _YEAR_CACHE[symbol] = out
+    return _YEAR_CACHE[symbol]
+
+
+def explorer_data():
+    """Year of daily closes for every stock, index, currency and commodity in the explorer."""
+    entries = [("stock", sym + ".NS", sym, "₹", 2) for sym in EXPLORER_STOCKS] + list(EXPLORER_OTHERS)
+    epoch = datetime(1970, 1, 1).date()
+    items = []
+    for kind, ysym, label, unit, dp in entries:
+        meta, bars = yahoo_year(ysym)
+        if len(bars) < 30:
+            continue
+        name = label
+        if kind == "stock":
+            name = (meta or {}).get("longName") or (meta or {}).get("shortName") or label
+        items.append({"k": kind, "s": label, "n": name, "u": unit, "dp": dp,
+                      "t": [(d - epoch).days for d, _ in bars],
+                      "p": [round(c, 4 if dp > 2 else 2) for _, c in bars]})
+    return {"items": items, "wanted": len(entries)}
+
+
+def explorer_html(data):
+    blob = json.dumps(data, separators=(",", ":")).replace("<", "\\u003c")
+    return blob, f"{len(data['items'])} of {data['wanted']} stocks, indices, currencies and commodities loaded"
+
+
 def strategy_lab():
     """Rule-based screen of Sensex stocks on past prices, for the strategy lab.
 
@@ -665,6 +743,7 @@ def build(today):
     brief = "\n".join(f"    <p>{esc(s)}</p>" for s in (s1, s2, s3, s4, s5))
 
     lab_json, lab_summary = lab_html(strategy_lab())
+    xp_json, xp_summary = explorer_html(explorer_data())
 
     now = datetime.now(IST)
     history = update_history(load_history(), now, today, gift, nifty)
@@ -674,7 +753,8 @@ def build(today):
     page = Template(TEMPLATE.read_text(encoding="utf-8")).substitute(
         updated=esc(updated), tiles=tiles, headlines=headlines_html, brief=brief,
         history=history_html(history), performers=performers_html(nse_top, bse_top),
-        lab_json=lab_json, lab_summary=esc(lab_summary))
+        lab_json=lab_json, lab_summary=esc(lab_summary),
+        xp_json=xp_json, xp_summary=esc(xp_summary))
     return page, found, history
 
 
