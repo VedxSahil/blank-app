@@ -31,6 +31,12 @@ For learning only. Not investment advice. Numbers can be wrong. Check them befor
   old `index.html` stays and the run fails.
 - If `index.html` changed, the workflow commits and pushes it. GitHub Pages serves it.
 
+## Host it on Vercel instead
+
+`vercel.json` tells Vercel to deploy only `index.html` as a static page, so it does not try to
+build the leftover Python files. Import the repo in Vercel with no build command and no
+framework. Each time the workflow commits a new `index.html`, Vercel redeploys.
+
 ## Set up once
 
 Turn on GitHub Pages (Settings > Pages): deploy from branch, folder `/ (root)`.
