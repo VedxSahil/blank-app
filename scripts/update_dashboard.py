@@ -581,6 +581,74 @@ def explorer_html(data):
     return blob, f"{len(data['items'])} of {data['wanted']} stocks, indices, currencies and commodities loaded"
 
 
+def options_data(xp, gift, nifty, flows, us):
+    """Spot levels and a bull/bear lean for the options lab.
+
+    The lean is a count of six plain signals, each +1 (bullish), 0 (neutral or not found)
+    or -1 (bearish). It describes today's data and is not a forecast.
+    """
+    items = {i["s"]: i for i in xp.get("items", [])}
+
+    def closes(label):
+        return (items.get(label) or {}).get("p") or []
+
+    def avg(xs):
+        return sum(xs) / len(xs)
+
+    signals = []
+
+    def add(name, value, lean):
+        signals.append({"n": name, "v": value, "l": lean})
+
+    n = closes("Nifty 50")
+    if len(n) >= 50:
+        a50 = avg(n[-50:])
+        gap = (n[-1] / a50 - 1) * 100
+        add("Nifty 50 against its 50-day average", f"{num(n[-1])} vs {num(a50)} ({signed(gap)}%)",
+            1 if gap > 0 else -1)
+    else:
+        add("Nifty 50 against its 50-day average", NF, 0)
+    if len(n) > 21:
+        m1 = (n[-1] / n[-22] - 1) * 100
+        add("Nifty 50 over the last month", f"{signed(m1)}%", 1 if m1 > 1 else -1 if m1 < -1 else 0)
+    else:
+        add("Nifty 50 over the last month", NF, 0)
+    v = closes("India VIX")
+    if len(v) >= 20:
+        v20 = avg(v[-20:])
+        rel = (v[-1] / v20 - 1) * 100
+        add("India VIX against its 20-day average", f"{num(v[-1])} vs {num(v20)} ({signed(rel)}%)",
+            1 if rel < 0 else -1 if rel > 10 else 0)
+    else:
+        add("India VIX against its 20-day average", NF, 0)
+    if gift and nifty:
+        gp = (gift["value"] - nifty["value"]) / nifty["value"] * 100
+        add("Expected open (GIFT Nifty)", f"{signed(gp)}%", 1 if gp > FLAT_BAND_PCT else -1 if gp < -FLAT_BAND_PCT else 0)
+    else:
+        add("Expected open (GIFT Nifty)", NF, 0)
+    if flows:
+        add("Foreign investors (FII) net flow", f"{signed(flows['fii'])} crore rupees", 1 if flows["fii"] > 0 else -1 if flows["fii"] < 0 else 0)
+    else:
+        add("Foreign investors (FII) net flow", NF, 0)
+    sp = us.get("S&P 500")
+    if sp:
+        add("S&P 500 overnight", f"{signed(sp['pct'])}%", 1 if sp["pct"] > 0.2 else -1 if sp["pct"] < -0.2 else 0)
+    else:
+        add("S&P 500 overnight", NF, 0)
+
+    score = sum(x["l"] for x in signals)
+    available = sum(x["v"] != NF for x in signals)
+    label = ("Bullish lean" if score >= 3 else "Mildly bullish lean" if score >= 1 else "Neutral"
+             if score == 0 else "Mildly bearish lean" if score > -3 else "Bearish lean")
+    spots = {k: (closes(k) or [None])[-1] for k in ("Nifty 50", "Nifty Bank", "Sensex")}
+    return {"signals": signals, "score": score, "label": label, "available": available,
+            "spots": spots, "vix": (v or [None])[-1]}
+
+
+def options_html(data):
+    return json.dumps(data, separators=(",", ":")).replace("<", "\\u003c")
+
+
 def strategy_lab():
     """Rule-based screen of Sensex stocks on past prices, for the strategy lab.
 
@@ -778,7 +846,9 @@ def build(today):
     brief = "\n".join(f"    <p>{esc(s)}</p>" for s in (s1, s2, s3, s4, s5))
 
     lab_json, lab_summary = lab_html(strategy_lab())
-    xp_json, xp_summary = explorer_html(explorer_data())
+    xp_data = explorer_data()
+    xp_json, xp_summary = explorer_html(xp_data)
+    opt_json = options_html(options_data(xp_data, gift, nifty, flows, us))
 
     now = datetime.now(IST)
     history = update_history(load_history(), now, today, gift, nifty)
@@ -789,7 +859,7 @@ def build(today):
         updated=esc(updated), tiles=tiles, glance=glance, headlines=headlines_html, brief=brief,
         history=history_html(history), performers=performers_html(nse_top, bse_top),
         lab_json=lab_json, lab_summary=esc(lab_summary),
-        xp_json=xp_json, xp_summary=esc(xp_summary))
+        xp_json=xp_json, xp_summary=esc(xp_summary), opt_json=opt_json)
     return page, found, history
 
 

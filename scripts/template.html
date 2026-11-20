@@ -146,6 +146,19 @@
   .home-card b { font-size: 1rem; }
   .home-card span { color: var(--muted); font-size: 0.9rem; }
   .steps, .notes { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 70ch; }
+  .opt select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 1rem; }
+  .opt input:focus-visible, .opt select:focus-visible, .opt button:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+  .opt-lean { font-size: 1.5rem; font-weight: 700; margin: 0; }
+  .gauge { position: relative; height: 12px; border-radius: 6px; margin: 14px 4px 6px; background: linear-gradient(90deg, var(--neg), var(--neu), var(--pos)); }
+  .gauge i { position: absolute; top: -5px; width: 6px; height: 22px; border-radius: 3px; background: var(--text); border: 2px solid var(--bg); }
+  .gauge-ends { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); }
+  .signals { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+  .signals li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 0.9rem; align-items: baseline; }
+  .signals small { display: block; color: var(--muted); font-size: 0.8rem; }
+  .payoff { width: 100%; height: auto; display: block; }
+  .opt-note { margin: 0; color: var(--muted); font-size: 0.85rem; }
+  .opt .leg-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .opt .check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
   footer { margin: 32px 0 16px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
 </style>
 <script>document.documentElement.className = "js";</script>
@@ -164,6 +177,7 @@
   <a href="#explorer" data-nav="explorer">Stock explorer</a>
   <a href="#performers" data-nav="performers">Top performers</a>
   <a href="#lab" data-nav="lab">Strategy lab</a>
+  <a href="#options" data-nav="options">Options</a>
   <a href="#news" data-nav="news">News</a>
 </nav>
 
@@ -186,6 +200,7 @@ $glance
     <a class="home-card" href="#explorer"><b>Stock explorer</b><span>Search about 120 stocks, indices, currencies and commodities. See price, returns over 1 week to 1 year, a chart and simple risk figures.</span></a>
     <a class="home-card" href="#performers"><b>Top performers</b><span>The biggest gainers on NSE and among Sensex stocks since the previous close, with a one-month trend graph.</span></a>
     <a class="home-card" href="#lab"><b>Strategy lab</b><span>A calculator that splits an amount across stocks and shows gain, loss and costs. It is a learning tool, not advice.</span></a>
+    <a class="home-card" href="#options"><b>Options</b><span>A bull and bear indicator from today's market signals, plus a calculator for the profit, loss and breakeven of common option strategies.</span></a>
     <a class="home-card" href="#news"><b>News</b><span>Eight market headlines with links to the source, a tone label, and who each story may help or hurt.</span></a>
   </div>
 
@@ -553,6 +568,247 @@ $performers
   </script>
 </section>
 
+<section id="options" data-view="options" aria-label="Options lab">
+  <h2>Options lab</h2>
+  <div class="card warn">
+    <strong>Learning tool, not advice.</strong> Options are leveraged and can lose the whole premium quickly, and some strategies can lose far more than you put in. The indicator only describes today's numbers, and the prices below are theoretical model prices, not market quotes. Nothing here tells you to buy or sell anything.
+  </div>
+
+  <div class="card lab opt" id="opt-indicator">
+    <div>
+      <h3 style="margin:0 0 4px;font-size:0.95rem">Bull and bear indicator</h3>
+      <p class="opt-lean" id="opt-label"></p>
+      <div class="gauge" id="opt-gauge" role="img" aria-label="Indicator scale from bearish to bullish"><i id="opt-marker"></i></div>
+      <div class="gauge-ends"><span>Bearish</span><span>Neutral</span><span>Bullish</span></div>
+      <ul class="signals" id="opt-signals"></ul>
+      <p class="opt-note" style="margin-top:10px">Six signals each count +1 (bullish), 0 or -1 (bearish) and the total sets the lean. It reflects the latest build of this page, not a forecast, and a missing signal counts as 0.</p>
+    </div>
+  </div>
+
+  <div class="card lab opt" id="opt-calc">
+    <div>
+      <h3 style="margin:0 0 10px;font-size:0.95rem">Strategy calculator</h3>
+      <div class="lab-form">
+        <label class="field" for="opt-under">Underlying
+          <select id="opt-under"><option>Nifty 50</option><option>Nifty Bank</option><option>Sensex</option></select></label>
+        <label class="field" for="opt-strategy">Strategy
+          <select id="opt-strategy">
+            <optgroup label="Bullish">
+              <option value="longcall">Long call</option>
+              <option value="bullcall" selected>Bull call spread</option>
+              <option value="bullput">Bull put spread</option>
+            </optgroup>
+            <optgroup label="Bearish">
+              <option value="longput">Long put</option>
+              <option value="bearput">Bear put spread</option>
+              <option value="bearcall">Bear call spread</option>
+            </optgroup>
+            <optgroup label="Either direction">
+              <option value="straddle">Long straddle</option>
+            </optgroup>
+          </select></label>
+        <label class="field" for="opt-spot">Spot price<input id="opt-spot" type="number" min="1" step="any" value="0"></label>
+        <label class="field" for="opt-lot">Lot size (units)<input id="opt-lot" type="number" min="1" step="1" value="75"></label>
+        <label class="field" for="opt-lots">Number of lots<input id="opt-lots" type="number" min="1" step="1" value="1"></label>
+        <label class="field" for="opt-days">Days to expiry<input id="opt-days" type="number" min="0" step="1" value="7"></label>
+        <label class="field" for="opt-iv">Volatility (% a year)<input id="opt-iv" type="number" min="1" step="0.1" value="15"></label>
+        <label class="field" for="opt-rate">Interest rate (% a year)<input id="opt-rate" type="number" min="0" step="0.1" value="6.5"></label>
+      </div>
+      <p class="opt-note" style="margin:10px 0">Volatility starts at the latest India VIX. Lot sizes change, so check the exchange's current value before relying on the totals.</p>
+      <div class="lab-form" id="opt-legs"></div>
+      <label class="check" style="margin-top:10px"><input type="checkbox" id="opt-theo" checked> Use theoretical premiums (Black-Scholes). Untick to type your own.</label>
+      <div class="lab-form" style="margin-top:10px">
+        <label class="field" for="opt-costs">Extra costs, total (₹)<input id="opt-costs" type="number" min="0" step="1" value="0"></label>
+        <label class="field" for="opt-expiry">Spot at expiry, for a quick check<input id="opt-expiry" type="number" min="0" step="any" value="0"></label>
+      </div>
+      <div id="opt-msg" class="opt-note" style="margin-top:10px" aria-live="polite"></div>
+      <div id="opt-out" aria-live="polite"></div>
+    </div>
+  </div>
+  <script type="application/json" id="opt-data">$opt_json</script>
+  <script>
+  (function () {
+    var node = document.getElementById('opt-data');
+    if (!node) return;
+    var data = JSON.parse(node.textContent);
+    function el(id) { return document.getElementById(id); }
+    function esc(x) { return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+    function inr(x) { return (x < 0 ? '-' : '') + '\u20b9' + Math.round(Math.abs(x)).toLocaleString('en-IN'); }
+    function cls(x) { return x > 0.5 ? 'up' : x < -0.5 ? 'down' : 'flat'; }
+    function numv(id) { var v = parseFloat(el(id).value); return isFinite(v) ? v : 0; }
+
+    /* ---------- indicator ---------- */
+    var score = data.score;
+    el('opt-label').textContent = data.label + ' (' + (score > 0 ? '+' : '') + score + ' of 6)';
+    el('opt-label').className = 'opt-lean ' + (score > 0 ? 'up' : score < 0 ? 'down' : 'flat');
+    el('opt-marker').style.left = 'calc(' + ((score + 6) / 12 * 100).toFixed(1) + '% - 3px)';
+    el('opt-gauge').setAttribute('aria-label', 'Indicator at ' + score + ' on a scale from -6 bearish to +6 bullish');
+    el('opt-signals').innerHTML = data.signals.map(function (s) {
+      var sym = s.l > 0 ? '\u25b2' : s.l < 0 ? '\u25bc' : '\u25a0';
+      return '<li><span class="' + (s.l > 0 ? 'up' : s.l < 0 ? 'down' : 'flat') + '" aria-hidden="true">' + sym + '</span><span>' + esc(s.n) +
+        '<small>' + esc(s.v) + ' &middot; ' + (s.l > 0 ? 'bullish' : s.l < 0 ? 'bearish' : 'neutral') + '</small></span></li>';
+    }).join('');
+
+    /* ---------- pricing ---------- */
+    function ncdf(x) {
+      var t = 1 / (1 + 0.2316419 * Math.abs(x));
+      var d = 0.3989423 * Math.exp(-x * x / 2);
+      var p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+      return x >= 0 ? 1 - p : p;
+    }
+    function bs(type, S, K, T, r, sig) {
+      if (T <= 0 || sig <= 0) return Math.max(type === 'C' ? S - K : K - S, 0);
+      var v = sig * Math.sqrt(T), d1 = (Math.log(S / K) + (r + sig * sig / 2) * T) / v, d2 = d1 - v;
+      return type === 'C' ? S * ncdf(d1) - K * Math.exp(-r * T) * ncdf(d2) : K * Math.exp(-r * T) * ncdf(-d2) - S * ncdf(-d1);
+    }
+
+    /* ---------- strategies: legs use qty +1 long, -1 short; k = which strike ---------- */
+    var STEP = { 'Nifty 50': 50, 'Nifty Bank': 100, 'Sensex': 100 };
+    var LOT = { 'Nifty 50': 75, 'Nifty Bank': 30, 'Sensex': 20 };
+    var STRAT = {
+      longcall: { name: 'Long call', strikes: 1, legs: [['C', 1, 1]], at: [0] },
+      longput: { name: 'Long put', strikes: 1, legs: [['P', 1, 1]], at: [0] },
+      bullcall: { name: 'Bull call spread', strikes: 2, legs: [['C', 1, 1], ['C', 2, -1]], at: [0, 2] },
+      bearput: { name: 'Bear put spread', strikes: 2, legs: [['P', 2, 1], ['P', 1, -1]], at: [-2, 0] },
+      bullput: { name: 'Bull put spread', strikes: 2, legs: [['P', 2, -1], ['P', 1, 1]], at: [-2, 0] },
+      bearcall: { name: 'Bear call spread', strikes: 2, legs: [['C', 1, -1], ['C', 2, 1]], at: [0, 2] },
+      straddle: { name: 'Long straddle', strikes: 1, legs: [['C', 1, 1], ['P', 1, 1]], at: [0] }
+    };
+    var strikesEl = el('opt-legs'), manual = {};
+
+    function atm(spot, step) { return Math.round(spot / step) * step; }
+    function setDefaults() {
+      var u = el('opt-under').value, st = STRAT[el('opt-strategy').value], spot = data.spots[u];
+      if (spot) el('opt-spot').value = Math.round(spot * 100) / 100;
+      el('opt-lot').value = LOT[u];
+      if (data.vix) el('opt-iv').value = Math.round(data.vix * 100) / 100;
+      el('opt-expiry').value = el('opt-spot').value;
+      buildLegs();
+    }
+    function buildLegs() {
+      var u = el('opt-under').value, key = el('opt-strategy').value, st = STRAT[key], step = STEP[u];
+      var base = atm(numv('opt-spot'), step), html = '', i;
+      for (i = 0; i < st.strikes; i++) {
+        html += '<label class="field" for="opt-k' + (i + 1) + '">' + (st.strikes === 1 ? 'Strike' : i === 0 ? 'Lower strike' : 'Higher strike') +
+          '<input id="opt-k' + (i + 1) + '" type="number" min="1" step="' + step + '" value="' + (base + st.at[i] * step) + '"></label>';
+      }
+      st.legs.forEach(function (lg, j) {
+        html += '<label class="field" for="opt-p' + j + '">' + (lg[2] > 0 ? 'Buy ' : 'Sell ') + (lg[0] === 'C' ? 'call' : 'put') + ' premium (per unit)' +
+          '<input id="opt-p' + j + '" type="number" min="0" step="0.05" value="0"></label>';
+      });
+      strikesEl.innerHTML = html;
+      manual = {};
+      calc();
+    }
+
+    /* ---------- calculation ---------- */
+    function payoffFn(legs, k, units, costs) {
+      return function (S) {
+        var tot = 0;
+        legs.forEach(function (lg) {
+          var intr = Math.max(lg.type === 'C' ? S - k[lg.k] : k[lg.k] - S, 0);
+          tot += lg.qty * (intr - lg.prem);
+        });
+        return tot * units - costs;
+      };
+    }
+    function calc() {
+      var key = el('opt-strategy').value, st = STRAT[key], msg = el('opt-msg'), out = el('opt-out');
+      var spot = numv('opt-spot'), units = numv('opt-lot') * numv('opt-lots'), days = numv('opt-days');
+      var r = numv('opt-rate') / 100, sig = numv('opt-iv') / 100, costs = numv('opt-costs'), T = days / 365;
+      var k = { 1: numv('opt-k1'), 2: numv('opt-k2') };
+      msg.textContent = ''; out.innerHTML = '';
+      if (!spot || !units) { msg.textContent = 'Enter a spot price, a lot size and at least one lot.'; return; }
+      if (st.strikes === 2 && !(k[1] < k[2])) { msg.textContent = 'The lower strike must be below the higher strike.'; return; }
+      if (!k[1] || (st.strikes === 2 && !k[2])) { msg.textContent = 'Enter the strike prices.'; return; }
+      var theo = el('opt-theo').checked, legs = [];
+      st.legs.forEach(function (lg, j) {
+        var box = el('opt-p' + j), tp = bs(lg[0], spot, k[lg[1]], T, r, sig);
+        if (theo) { box.value = tp.toFixed(2); box.disabled = true; } else { box.disabled = false; }
+        legs.push({ type: lg[0], k: lg[1], qty: lg[2], prem: Math.max(parseFloat(box.value) || 0, 0) });
+      });
+      var f = payoffFn(legs, k, units, costs);
+      var net = 0; legs.forEach(function (lg) { net += lg.qty * lg.prem; });
+      var netTotal = net * units, debit = netTotal > 0;
+      /* piecewise linear: check the value at 0, each strike and far above */
+      var ks = [k[1]].concat(st.strikes === 2 ? [k[2]] : []), pts = [0].concat(ks), big = Math.max(spot, k[1], k[2] || 0) * 20;
+      var vals = pts.map(f), vBig = f(big), vBig2 = f(big * 0.9), slope = (vBig - vBig2) / (big * 0.1);
+      var maxP = Math.max.apply(null, vals), maxL = Math.min.apply(null, vals), unbounded = slope > 1e-9;
+      if (unbounded) maxP = Infinity;
+      var be = [], i, seg = pts.concat([big]), sv = vals.concat([vBig]);
+      for (i = 0; i < seg.length - 1; i++) {
+        var a = sv[i], b = sv[i + 1];
+        if ((a < 0 && b > 0) || (a > 0 && b < 0)) be.push(seg[i] + (0 - a) * (seg[i + 1] - seg[i]) / (b - a));
+        else if (a === 0 && i > 0 && sv[i - 1] !== 0) be.push(seg[i]);
+      }
+      var lossTxt = maxL < 0 ? inr(maxL) : 'none';
+      var rr = (isFinite(maxP) && maxL < 0) ? (maxP / -maxL).toFixed(2) : (unbounded && maxL < 0 ? 'open-ended' : 'n/a');
+      var xs = numv('opt-expiry'), atX = f(xs);
+      function card(label, value, sub, c) { return '<div class="tile"><div class="label">' + label + '</div><div class="value ' + (c || '') + '">' + value + '</div><div class="sub">' + (sub || '') + '</div></div>'; }
+      var html = '<div class="lab-cards" style="margin-top:14px">' +
+        card(debit ? 'You pay (debit)' : 'You receive (credit)', inr(Math.abs(netTotal)), 'Premium for ' + units + ' units' + (costs ? ', before extra costs' : ''), '') +
+        card('Most you can make', isFinite(maxP) ? inr(maxP) : 'No limit', 'At expiry', 'up') +
+        card('Most you can lose', lossTxt, 'At expiry' + (maxL < 0 ? '' : ''), 'down') +
+        card('Breakeven at expiry', be.length ? be.map(function (x) { return Math.round(x).toLocaleString('en-IN'); }).join(' and ') : 'none', be.length ? ((be[0] / spot - 1) * 100).toFixed(2) + '% from spot' + (be.length > 1 ? ' and ' + ((be[1] / spot - 1) * 100).toFixed(2) + '%' : '') : '', '') +
+        card('Reward to risk', rr, 'Maximum gain divided by maximum loss', '') +
+        card('If spot ends at ' + Math.round(xs).toLocaleString('en-IN'), inr(atX), ((xs / spot - 1) * 100 >= 0 ? '+' : '') + ((xs / spot - 1) * 100).toFixed(2) + '% from spot', cls(atX)) +
+        '</div>';
+      html += chart(f, spot, ks, be, maxP, maxL);
+      var rows = [-5, -3, -1, 0, 1, 3, 5].map(function (p) {
+        var S = spot * (1 + p / 100), v = f(S);
+        return '<tr><td>' + (p > 0 ? '+' : '') + p + '%</td><td>' + Math.round(S).toLocaleString('en-IN') + '</td><td class="' + cls(v) + '">' + inr(v) + '</td><td>' + (maxL < 0 ? (v / -maxL * 100).toFixed(0) + '%' : '') + '</td></tr>';
+      }).join('');
+      html += '<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Move</th><th>Spot at expiry</th><th>Profit or loss</th><th>Of max loss</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+      html += '<p class="opt-note" style="margin-top:10px">All figures are at expiry and assume the strikes and premiums above. Margin, early exit, assignment, taxes and bid-ask gaps are not modelled. Credit spreads need margin, which is not calculated here.</p>';
+      out.innerHTML = html;
+    }
+
+    function chart(f, spot, ks, be, maxP, maxL) {
+      var W = 640, H = 280, L = 62, R = 14, T = 14, B = 28;
+      var lo = Math.min.apply(null, [spot].concat(ks).concat(be)) * 0.94, hi = Math.max.apply(null, [spot].concat(ks).concat(be)) * 1.06;
+      lo = Math.min(lo, spot * 0.9); hi = Math.max(hi, spot * 1.1);
+      var N = 120, xsv = [], ysv = [], i;
+      for (i = 0; i <= N; i++) { var xx = lo + (hi - lo) * i / N; xsv.push(xx); ysv.push(f(xx)); }
+      var ymin = Math.min.apply(null, ysv.concat([0])), ymax = Math.max.apply(null, ysv.concat([0])), padv = (ymax - ymin) * 0.08 || 1;
+      ymin -= padv; ymax += padv;
+      function X(v) { return L + (v - lo) / (hi - lo) * (W - L - R); }
+      function Y(v) { return T + (ymax - v) / (ymax - ymin) * (H - T - B); }
+      var pts = xsv.map(function (v, j) { return X(v).toFixed(1) + ',' + Y(ysv[j]).toFixed(1); }).join(' ');
+      var zy = Y(0).toFixed(1), area = X(lo).toFixed(1) + ',' + zy + ' ' + pts + ' ' + X(hi).toFixed(1) + ',' + zy;
+      var s = '<svg class="payoff" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Profit and loss at expiry for the chosen strategy">' +
+        '<defs><clipPath id="opt-cp"><rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + Math.max(Y(0) - T, 0).toFixed(1) + '"/></clipPath>' +
+        '<clipPath id="opt-cn"><rect x="' + L + '" y="' + zy + '" width="' + (W - L - R) + '" height="' + Math.max(H - B - Y(0), 0).toFixed(1) + '"/></clipPath></defs>';
+      for (i = 0; i <= 4; i++) {
+        var gv = ymin + (ymax - ymin) * i / 4, gy = Y(gv).toFixed(1);
+        s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" class="grid-line"/><text x="' + (L - 6) + '" y="' + (parseFloat(gy) + 4) + '" text-anchor="end" class="axis">' +
+          (gv < 0 ? '-' : '') + '\u20b9' + (Math.abs(gv) >= 100000 ? (Math.abs(gv) / 100000).toFixed(1) + 'L' : Math.abs(gv) >= 1000 ? (Math.abs(gv) / 1000).toFixed(1) + 'k' : Math.round(Math.abs(gv))) + '</text>';
+      }
+      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + zy + '" y2="' + zy + '" class="grid-line zero"/>' +
+        '<polygon points="' + area + '" fill="var(--pos)" opacity="0.28" clip-path="url(#opt-cp)"/>' +
+        '<polygon points="' + area + '" fill="var(--neg)" opacity="0.28" clip-path="url(#opt-cn)"/>' +
+        '<polyline points="' + pts + '" fill="none" stroke="var(--text)" stroke-width="2" stroke-linejoin="round"/>';
+      s += '<line x1="' + X(spot).toFixed(1) + '" x2="' + X(spot).toFixed(1) + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--s1)" stroke-dasharray="4 3"/>' +
+        '<text x="' + X(spot).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" class="axis" style="fill:var(--s1)">Spot ' + Math.round(spot).toLocaleString('en-IN') + '</text>';
+      be.forEach(function (b) {
+        s += '<circle cx="' + X(b).toFixed(1) + '" cy="' + zy + '" r="4.5" fill="var(--bg)" stroke="var(--text)" stroke-width="2"/>' +
+          '<text x="' + X(b).toFixed(1) + '" y="' + (parseFloat(zy) - 9) + '" text-anchor="middle" class="axis" style="fill:var(--text)">' + Math.round(b).toLocaleString('en-IN') + '</text>';
+      });
+      return '<div style="margin-top:14px"><div class="sub" style="margin-bottom:4px">Profit or loss at expiry across the underlying price. Circles mark breakevens.</div>' + s + '</svg></div>';
+    }
+
+    /* ---------- wiring ---------- */
+    el('opt-under').addEventListener('change', setDefaults);
+    el('opt-strategy').addEventListener('change', buildLegs);
+    ['opt-spot'].forEach(function (id) { el(id).addEventListener('change', function () { el('opt-expiry').value = el('opt-spot').value; buildLegs(); }); });
+    ['opt-lot', 'opt-lots', 'opt-days', 'opt-iv', 'opt-rate', 'opt-costs', 'opt-expiry', 'opt-theo'].forEach(function (id) { el(id).addEventListener('input', calc); });
+    el('opt-calc').addEventListener('input', function (e) { if (/^opt-(k|p)\d/.test(e.target.id)) calc(); });
+    setDefaults();
+    /* start on the strategy that matches the indicator's lean, as a starting point only */
+    if (score <= -1) { el('opt-strategy').value = 'bearput'; buildLegs(); }
+  })();
+  </script>
+</section>
+
 <section id="news" data-view="news" aria-label="Top headlines">
   <h2>Top headlines</h2>
   <ol class="headlines">
@@ -577,7 +833,7 @@ $history
 
 <script>
 (function () {
-  var VIEWS = ['home', 'markets', 'explorer', 'performers', 'lab', 'news'];
+  var VIEWS = ['home', 'markets', 'explorer', 'performers', 'lab', 'options', 'news'];
   var sections = document.querySelectorAll('[data-view]');
   var links = document.querySelectorAll('[data-nav]');
   // With scripting on, tabs replace anchors, so stop the browser jumping to a section behind the bar.
