@@ -635,7 +635,7 @@ $performers
     function esc(x) { return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
     function inr(x) { return (x < 0 ? '-' : '') + '\u20b9' + Math.round(Math.abs(x)).toLocaleString('en-IN'); }
     function cls(x) { return x > 0.5 ? 'up' : x < -0.5 ? 'down' : 'flat'; }
-    function numv(id) { var v = parseFloat(el(id).value); return isFinite(v) ? v : 0; }
+    function numv(id) { var box = el(id); var v = box ? parseFloat(box.value) : 0; return isFinite(v) ? v : 0; }
 
     /* ---------- indicator ---------- */
     var score = data.score;
@@ -742,12 +742,13 @@ $performers
         else if (a === 0 && i > 0 && sv[i - 1] !== 0) be.push(seg[i]);
       }
       var lossTxt = maxL < 0 ? inr(maxL) : 'none';
-      var rr = (isFinite(maxP) && maxL < 0) ? (maxP / -maxL).toFixed(2) : (unbounded && maxL < 0 ? 'open-ended' : 'n/a');
+      var leftTail = vals[0] > vals[1] + 1e-9 && vals[0] >= maxP - 1e-9;
+      var rr = leftTail ? 'n/a' : (isFinite(maxP) && maxL < 0) ? (maxP / -maxL).toFixed(2) : (unbounded && maxL < 0 ? 'open-ended' : 'n/a');
       var xs = numv('opt-expiry'), atX = f(xs);
       function card(label, value, sub, c) { return '<div class="tile"><div class="label">' + label + '</div><div class="value ' + (c || '') + '">' + value + '</div><div class="sub">' + (sub || '') + '</div></div>'; }
       var html = '<div class="lab-cards" style="margin-top:14px">' +
         card(debit ? 'You pay (debit)' : 'You receive (credit)', inr(Math.abs(netTotal)), 'Premium for ' + units + ' units' + (costs ? ', before extra costs' : ''), '') +
-        card('Most you can make', isFinite(maxP) ? inr(maxP) : 'No limit', 'At expiry', 'up') +
+        card('Most you can make', isFinite(maxP) ? inr(maxP) : 'No limit', leftTail && isFinite(maxP) ? 'Only if the price fell to zero, so treat it as theoretical' : 'At expiry', 'up') +
         card('Most you can lose', lossTxt, 'At expiry' + (maxL < 0 ? '' : ''), 'down') +
         card('Breakeven at expiry', be.length ? be.map(function (x) { return Math.round(x).toLocaleString('en-IN'); }).join(' and ') : 'none', be.length ? ((be[0] / spot - 1) * 100).toFixed(2) + '% from spot' + (be.length > 1 ? ' and ' + ((be[1] / spot - 1) * 100).toFixed(2) + '%' : '') : '', '') +
         card('Reward to risk', rr, 'Maximum gain divided by maximum loss', '') +
@@ -778,12 +779,15 @@ $performers
       var s = '<svg class="payoff" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Profit and loss at expiry for the chosen strategy">' +
         '<defs><clipPath id="opt-cp"><rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + Math.max(Y(0) - T, 0).toFixed(1) + '"/></clipPath>' +
         '<clipPath id="opt-cn"><rect x="' + L + '" y="' + zy + '" width="' + (W - L - R) + '" height="' + Math.max(H - B - Y(0), 0).toFixed(1) + '"/></clipPath></defs>';
-      for (i = 0; i <= 4; i++) {
-        var gv = ymin + (ymax - ymin) * i / 4, gy = Y(gv).toFixed(1);
+      var rng = (ymax - ymin) / 4, p10 = Math.pow(10, Math.floor(Math.log(rng) / Math.LN10)), fr = rng / p10;
+      var tstep = (fr <= 1.5 ? 1 : fr <= 3 ? 2 : fr <= 7 ? 5 : 10) * p10, k0 = Math.ceil(ymin / tstep), k1 = Math.floor(ymax / tstep), kk;
+      for (kk = k0; kk <= k1; kk++) {
+        var gv = kk * tstep, gy = Y(gv).toFixed(1);
+        if (kk === 0) continue;
         s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" class="grid-line"/><text x="' + (L - 6) + '" y="' + (parseFloat(gy) + 4) + '" text-anchor="end" class="axis">' +
           (gv < 0 ? '-' : '') + '\u20b9' + (Math.abs(gv) >= 100000 ? (Math.abs(gv) / 100000).toFixed(1) + 'L' : Math.abs(gv) >= 1000 ? (Math.abs(gv) / 1000).toFixed(1) + 'k' : Math.round(Math.abs(gv))) + '</text>';
       }
-      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + zy + '" y2="' + zy + '" class="grid-line zero"/>' +
+      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + zy + '" y2="' + zy + '" class="grid-line zero"/><text x="' + (L - 6) + '" y="' + (parseFloat(zy) + 4) + '" text-anchor="end" class="axis">\u20b90</text>' +
         '<polygon points="' + area + '" fill="var(--pos)" opacity="0.28" clip-path="url(#opt-cp)"/>' +
         '<polygon points="' + area + '" fill="var(--neg)" opacity="0.28" clip-path="url(#opt-cn)"/>' +
         '<polyline points="' + pts + '" fill="none" stroke="var(--text)" stroke-width="2" stroke-linejoin="round"/>';
