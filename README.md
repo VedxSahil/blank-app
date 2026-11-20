@@ -53,6 +53,22 @@ refuses NSE data, so Indian stocks use their BSE listing, a few world indices us
 tracking TradingView feed, and the Nifty 50, Nifty Bank, Nifty IT and India VIX show an
 "Open on TradingView" link instead. The symbol mapping is in `scripts/update_dashboard.py`.
 
+## Options lab
+
+An Options tab with two parts, both for learning only.
+
+- **Bull and bear indicator.** Six plain signals each count +1, 0 or -1: Nifty 50 against its
+  50-day average, Nifty over the last month, India VIX against its 20-day average, the expected
+  open from GIFT Nifty, the FII net flow and the S&P 500 overnight. The total sets a lean from
+  bearish to bullish. It describes the latest build, not a forecast. A missing signal counts as 0.
+- **Strategy calculator.** Pick an underlying (Nifty 50, Nifty Bank or Sensex) and a strategy
+  (long call, long put, bull call spread, bull put spread, bear put spread, bear call spread or
+  long straddle), then set the strikes, lots, days to expiry, volatility and rate. Premiums are
+  Black-Scholes model prices using the latest India VIX as volatility, or you can type your own.
+  It shows the debit or credit, the most you can make and lose, breakevens, reward to risk, a
+  payoff chart at expiry and a table of outcomes for moves of -5% to +5%. Margin, early exit,
+  taxes and bid-ask gaps are not modelled, and lot sizes in the code may be out of date.
+
 ## Strategy lab
 
 A learning calculator under the performance charts. A fixed rule screens the 30 Sensex stocks on
